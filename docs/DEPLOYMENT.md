@@ -18,7 +18,7 @@ The backend is deployed as a Render Free Tier web service and uses Neon PostgreS
 - Runtime: `node`
 - Plan: `free`
 - Root directory: repository root
-- Build command: `npm install && npm run db:generate && npm run build --workspace backend`
+- Build command: `npm install --include=dev && npm run db:generate && npm run build --workspace backend`
 - Start command: `npm run start --workspace backend`
 
 ### Required environment variables
@@ -46,5 +46,6 @@ Render should use this endpoint for uptime checks.
 - Keep `CLIENT_ORIGIN` pointed at the deployed frontend URL.
 - Keep `DATABASE_URL` on the pooled Neon endpoint to support runtime traffic.
 - Keep `DIRECT_URL` on the direct Neon endpoint to support migrations.
+- Keep `npm install --include=dev` in the Render build command because TypeScript, Prisma CLI, and Node type definitions are build-time dependencies.
 - Rotate JWT secrets before production launch.
 - Set `LOG_LEVEL=info` in production.

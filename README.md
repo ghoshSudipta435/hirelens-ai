@@ -192,7 +192,7 @@ The backend is designed to run on Render Free Tier with Neon PostgreSQL.
 
 1. Create a Neon branch for production.
 2. Create a Render web service from the repository root.
-3. Use the build command `npm install && npm run db:generate && npm run build --workspace backend`.
+3. Use the build command `npm install --include=dev && npm run db:generate && npm run build --workspace backend`.
 4. Use the start command `npm run start --workspace backend`.
 5. Set `CLIENT_ORIGIN` to the deployed frontend URL.
 6. Set `DATABASE_URL` to the pooled Neon connection string.

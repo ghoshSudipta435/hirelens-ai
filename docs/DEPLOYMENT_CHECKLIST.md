@@ -13,7 +13,7 @@
 
 - [ ] Create the backend web service
 - [ ] Set root directory to the repo root
-- [ ] Set build command to `npm install && npm run db:generate && npm run build --workspace backend`
+- [ ] Set build command to `npm install --include=dev && npm run db:generate && npm run build --workspace backend`
 - [ ] Set start command to `npm run start --workspace backend`
 - [ ] Set `NODE_ENV=production`
 - [ ] Set `PORT=10000`
