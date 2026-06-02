@@ -17,7 +17,7 @@ The backend is deployed as a Render Free Tier web service and uses Neon PostgreS
 - Runtime: `node`
 - Plan: `free`
 - Root directory: repository root
-- Build command: `npm install && npm run db:generate --workspace backend && npm run build --workspace backend`
+- Build command: `npm install && npm run db:generate && npm run build --workspace backend`
 - Start command: `npm run start --workspace backend`
 
 ### Required environment variables
