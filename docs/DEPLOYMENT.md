@@ -10,6 +10,7 @@ The backend is deployed as a Render Free Tier web service and uses Neon PostgreS
 - Neon provides the PostgreSQL database for both development and production.
 - Prisma runtime queries use the pooled Neon `DATABASE_URL`.
 - Prisma migrations use the direct Neon `DIRECT_URL`.
+- Prisma generate can fall back to `DATABASE_URL` during platform builds, but `DIRECT_URL` should still be set for migration workflows.
 
 ### Render service settings
 

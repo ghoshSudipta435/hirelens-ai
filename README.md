@@ -196,7 +196,7 @@ The backend is designed to run on Render Free Tier with Neon PostgreSQL.
 4. Use the start command `npm run start --workspace backend`.
 5. Set `CLIENT_ORIGIN` to the deployed frontend URL.
 6. Set `DATABASE_URL` to the pooled Neon connection string.
-7. Set `DIRECT_URL` to the direct Neon connection string.
+7. Set `DIRECT_URL` to the direct Neon connection string. Prisma generate can fall back to `DATABASE_URL` during build, but migration workflows still need `DIRECT_URL`.
 8. Set JWT, bcrypt, and Cloudinary environment variables.
 9. Deploy migrations with `npm run db:deploy` when schema changes are committed.
 10. Verify the service with `GET /health`.
