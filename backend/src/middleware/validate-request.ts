@@ -22,7 +22,16 @@ export function validateRequest(schemas: RequestSchemas): RequestHandler {
       }
 
       if (schemas.query) {
-        request.query = schemas.query.parse(request.query) as Request['query'];
+        const parsedQuery = schemas.query.parse(request.query);
+        try {
+          request.query = parsedQuery as Request['query'];
+        } catch {
+          Object.defineProperty(request, 'query', {
+            value: parsedQuery,
+            writable: true,
+            configurable: true,
+          });
+        }
       }
 
       next();

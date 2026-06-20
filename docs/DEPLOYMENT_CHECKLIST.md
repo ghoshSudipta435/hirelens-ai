@@ -18,8 +18,14 @@
 - [ ] Set `NODE_ENV=production`
 - [ ] Set `PORT=10000`
 - [ ] Set `CLIENT_ORIGIN` to the deployed frontend URL
-- [ ] Set JWT secrets
+- [ ] Set `DATABASE_URL` to the pooled Neon URL
+- [ ] Set `DIRECT_URL` to the direct Neon URL
+- [ ] Set `JWT_SECRET` to a generated secret of at least 32 characters
+- [ ] Set `JWT_REFRESH_SECRET` to a different generated secret of at least 32 characters
+- [ ] Set `JWT_EXPIRES_IN=15m`
+- [ ] Set `JWT_REFRESH_EXPIRES_IN=7d`
 - [ ] Set Cloudinary credentials
+- [ ] Confirm no required environment variable is blank in Render
 - [ ] Verify `GET /health`
 
 ## Verification

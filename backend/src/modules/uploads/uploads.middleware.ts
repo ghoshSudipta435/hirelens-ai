@@ -8,6 +8,8 @@ import {
   UPLOAD_MAX_FILE_SIZE_BYTES,
 } from './uploads.constants';
 
+// Use memory storage but with streaming-aware limits
+// Multer v2 + memoryStorage buffers the file, but we pipe it to Cloudinary via streaming upload
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -58,6 +60,37 @@ export function uploadSingleFile(fieldName: string): RequestHandler {
         );
 
         return;
+      }
+
+      next();
+    });
+  };
+}
+
+// Streaming upload middleware — stores file in memory but exposes stream for piping
+// This avoids loading the entire file into a separate buffer during Cloudinary upload
+export function uploadSingleFileStream(fieldName: string): RequestHandler {
+  const single = upload.single(fieldName);
+
+  return (request: Request, response: Response, next: NextFunction) => {
+    single(request, response, (error) => {
+      if (error) {
+        const mappedError =
+          error instanceof ApiError ? error : mapMulterError(error);
+
+        next(
+          mappedError ??
+            new ApiError(StatusCodes.BAD_REQUEST, 'FILE_UPLOAD_ERROR', 'Unable to process upload'),
+        );
+
+        return;
+      }
+
+      // Attach a readable stream from the buffer for downstream streaming
+      if (request.file) {
+        const { Readable } = require('node:stream') as typeof import('node:stream');
+        const fileBuffer = request.file.buffer;
+        (request.file as Express.Multer.File & { stream: import('node:stream').Readable }).stream = Readable.from(fileBuffer);
       }
 
       next();

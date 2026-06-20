@@ -27,6 +27,7 @@ describe('uploads routes', () => {
     prismaFixture.state.refreshTokens.length = 0;
     prismaFixture.state.uploads.length = 0;
     prismaFixture.state.authAuditEvents.length = 0;
+    prismaFixture.state.uploadAuditEvents.length = 0;
     cloudinaryStorageMock.uploadFile.mockReset();
     cloudinaryStorageMock.deleteFile.mockReset();
     cloudinaryStorageMock.createSignedUrl.mockReset();
@@ -72,24 +73,25 @@ describe('uploads routes', () => {
       });
 
     expect(uploadResponse.status).toBe(201);
-    expect(uploadResponse.body.data.upload.originalName).toBe('resume.pdf');
-    expect(uploadResponse.body.data.signedUrl).toBe('https://signed.example/upload');
+    expect(uploadResponse.body.data.fileName).toBe('resume.pdf');
+    expect(uploadResponse.body.data.fileUrl).toBe('https://signed.example/upload');
+    expect(prismaFixture.state.uploadAuditEvents.at(-1)?.eventType).toBe('UPLOAD_CREATE');
 
-    const uploadId = uploadResponse.body.data.upload.id as string;
+    const uploadId = uploadResponse.body.data.id as string;
 
     const getResponse = await request(app)
       .get(`/api/v1/uploads/${uploadId}`)
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(getResponse.status).toBe(200);
-    expect(getResponse.body.data.upload.id).toBe(uploadId);
+    expect(getResponse.body.data.id).toBe(uploadId);
 
     const deleteResponse = await request(app)
       .delete(`/api/v1/uploads/${uploadId}`)
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(deleteResponse.status).toBe(200);
-    expect(deleteResponse.body.data.uploadId).toBe(uploadId);
+    expect(deleteResponse.body.success).toBe(true);
     expect(cloudinaryStorageMock.deleteFile).toHaveBeenCalledTimes(1);
 
     const afterDeleteResponse = await request(app)
@@ -98,6 +100,36 @@ describe('uploads routes', () => {
 
     expect(afterDeleteResponse.status).toBe(404);
     expect(afterDeleteResponse.body.error.code).toBe('UPLOAD_NOT_FOUND');
+  });
+
+  it('lists owned files', async () => {
+    const { createApp } = await import('../../src/app');
+    const app = createApp();
+
+    const registerResponse = await request(app).post('/api/v1/auth/register').send({
+      name: 'Ava Sharma',
+      email: 'ava@example.com',
+      password: 'StrongPassword123!',
+      role: 'STUDENT',
+    });
+
+    const accessToken = registerResponse.body.data.accessToken;
+
+    await request(app)
+      .post('/api/v1/uploads')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .attach('file', Buffer.from('%PDF-1.4 resume'), {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      });
+
+    const listResponse = await request(app)
+      .get('/api/v1/uploads')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.data.items).toHaveLength(1);
+    expect(listResponse.body.data.items[0].fileName).toBe('resume.pdf');
   });
 
   it('rejects unsupported mime types before upload', async () => {
@@ -149,7 +181,7 @@ describe('uploads routes', () => {
         contentType: 'application/pdf',
       });
 
-    const uploadId = uploadResponse.body.data.upload.id as string;
+    const uploadId = uploadResponse.body.data.id as string;
 
     const response = await request(app)
       .get(`/api/v1/uploads/${uploadId}`)

@@ -5,11 +5,13 @@ import { authenticateAccessToken } from '../auth/auth.middleware';
 import { uploadSingleFile } from './uploads.middleware';
 import { uploadRateLimit } from './uploads.rate-limit';
 import { UploadController } from './uploads.controller';
-import { uploadParamsSchema } from './uploads.schemas';
+import { uploadListQuerySchema, uploadParamsSchema } from './uploads.schemas';
 
 const uploadController = new UploadController();
 
 export const uploadsRouter = Router();
+
+uploadsRouter.get('/', authenticateAccessToken, validateRequest({ query: uploadListQuerySchema }), uploadController.listUploads);
 
 uploadsRouter.post(
   '/',

@@ -11,5 +11,5 @@ export const ALLOWED_UPLOAD_EXTENSIONS = new Set(['pdf', 'docx', 'png', 'jpg', '
 
 export const UPLOAD_FOLDER = 'hirelens-ai/uploads';
 
-export const UPLOAD_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-export const UPLOAD_RATE_LIMIT_MAX = 10;
+export const UPLOAD_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+export const UPLOAD_RATE_LIMIT_MAX = 20;

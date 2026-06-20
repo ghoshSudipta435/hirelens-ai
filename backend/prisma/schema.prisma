@@ -14,9 +14,8 @@ enum UserRole {
 }
 
 enum ResumeStatus {
-  PROCESSING
-  READY
-  FAILED
+  DRAFT
+  ACTIVE
   ARCHIVED
 }
 
@@ -65,9 +64,16 @@ enum AuthEventType {
   PROFILE
 }
 
-enum UploadResourceType {
-  IMAGE
-  RAW
+enum UploadAuditEventType {
+  UPLOAD_CREATE
+  UPLOAD_GET
+  UPLOAD_DELETE
+}
+
+enum ResumeAuditEventType {
+  RESUME_CREATED
+  RESUME_UPDATED
+  RESUME_DELETED
 }
 
 model User {
@@ -84,7 +90,9 @@ model User {
   recruiterProfile RecruiterProfile?
   refreshTokens   RefreshToken[]
   authAuditEvents AuthAuditEvent[]
-  uploads         Upload[]
+  uploadedFiles   UploadedFile[]
+  uploadAuditEvents UploadAuditEvent[]
+  resumeAuditEvents ResumeAuditEvent[]
 }
 
 model StudentProfile {
@@ -116,24 +124,22 @@ model RecruiterProfile {
 
 model Resume {
   id              String         @id @default(cuid())
-  userId          String
-  label           String?
-  fileUrl         String
-  originalName    String
-  mimeType        String
-  fileSizeBytes   Int
-  parsedText      String?
-  extractedSkills String[]
-  status          ResumeStatus   @default(PROCESSING)
-  isDefault       Boolean        @default(false)
+  ownerId         String
+  uploadedFileId  String         @unique
+  title           String
+  version         Int
+  status          ResumeStatus   @default(DRAFT)
+  parsedData      Json?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
-  user            User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  owner           User           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedFile    UploadedFile   @relation(fields: [uploadedFileId], references: [id], onDelete: Restrict)
   applications    Application[]
   matchResults    MatchResult[]
 
-  @@index([userId, createdAt])
+  @@index([ownerId, status])
+  @@index([ownerId, deletedAt])
 }
 
 model JobPosting {
@@ -153,6 +159,8 @@ model JobPosting {
   matchResults    MatchResult[]
 
   @@index([recruiterId, status])
+  @@index([status, createdAt])
+  @@index([employmentType, locationMode])
 }
 
 model Application {
@@ -162,12 +170,16 @@ model Application {
   status         ApplicationStatus @default(SUBMITTED)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
   resume         Resume            @relation(fields: [resumeId], references: [id], onDelete: Restrict)
   jobPosting     JobPosting        @relation(fields: [jobPostingId], references: [id], onDelete: Restrict)
   matchResults   MatchResult[]
 
   @@unique([resumeId, jobPostingId])
   @@index([jobPostingId, status])
+  @@index([resumeId])
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model MatchResult {
@@ -182,6 +194,8 @@ model MatchResult {
   strengths         String[]
   scoreVersion      String
   createdAt         DateTime         @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
   resume            Resume           @relation(fields: [resumeId], references: [id], onDelete: Restrict)
   jobPosting        JobPosting?      @relation(fields: [jobPostingId], references: [id], onDelete: Restrict)
   application       Application?     @relation(fields: [applicationId], references: [id], onDelete: Restrict)
@@ -190,6 +204,8 @@ model MatchResult {
   @@index([resumeId, createdAt])
   @@index([jobPostingId, createdAt])
   @@index([applicationId, createdAt])
+  @@index([score])
+  @@index([deletedAt])
 }
 
 model InterviewQuestionSet {
@@ -198,6 +214,8 @@ model InterviewQuestionSet {
   createdAt      DateTime            @default(now())
   matchResult    MatchResult         @relation(fields: [matchResultId], references: [id], onDelete: Restrict)
   questions      InterviewQuestion[]
+
+  @@index([matchResultId])
 }
 
 model InterviewQuestion {
@@ -208,6 +226,8 @@ model InterviewQuestion {
   category       String
   createdAt      DateTime            @default(now())
   questionSet    InterviewQuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+
+  @@index([questionSetId])
 }
 
 model RefreshToken {
@@ -239,21 +259,56 @@ model AuthAuditEvent {
   @@index([userId, createdAt])
 }
 
-model Upload {
-  id                  String            @id @default(cuid())
-  userId              String
-  originalName        String
-  fileExtension       String
-  mimeType            String
-  fileSizeBytes       Int
-  cloudinaryPublicId  String            @unique
-  cloudinarySecureUrl  String
-  cloudinaryResourceType UploadResourceType
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  deletedAt           DateTime?
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+model UploadedFile {
+  id                 String   @id @default(cuid())
+  ownerId            String
+  fileName           String
+  fileType           String
+  fileSize           Int
+  cloudinaryPublicId String   @unique
+  fileUrl            String
+  createdAt          DateTime @default(now())
+  deletedAt          DateTime?
+  owner              User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  resume             Resume?
 
-  @@index([userId, createdAt])
-  @@index([userId, deletedAt])
+  @@index([ownerId, createdAt])
+  @@index([ownerId, deletedAt])
+}
+
+model UploadAuditEvent {
+  id             String               @id @default(cuid())
+  eventType      UploadAuditEventType
+  success        Boolean
+  ownerId        String?
+  uploadedFileId String?
+  fileName       String?
+  reason         String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json?
+  createdAt      DateTime             @default(now())
+  owner          User?                @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([uploadedFileId, createdAt])
+}
+
+model ResumeAuditEvent {
+  id         String               @id @default(cuid())
+  eventType  ResumeAuditEventType
+  success    Boolean
+  ownerId    String?
+  resumeId   String?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime             @default(now())
+  owner      User?                @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([resumeId, createdAt])
 }

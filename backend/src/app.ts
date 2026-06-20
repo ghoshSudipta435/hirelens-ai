@@ -8,6 +8,7 @@ import { env } from './config/env';
 import { requestLogger } from './config/logger';
 import { errorHandler } from './middleware/error-handler';
 import { notFoundHandler } from './middleware/not-found';
+import { sentryErrorHandler } from './middleware/sentry';
 import { apiRouter } from './routes';
 import { sendHealthResponse } from './routes/health.route';
 
@@ -35,6 +36,7 @@ export function createApp() {
   app.use(env.API_PREFIX, apiRouter);
 
   app.use(notFoundHandler);
+  app.use(sentryErrorHandler());
   app.use(errorHandler);
 
   return app;

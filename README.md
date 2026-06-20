@@ -5,7 +5,7 @@ HireLens AI is an AI-assisted resume screening and interview preparation platfor
 - `frontend`: Next.js App Router client built with React and TypeScript
 - `backend`: Express API built with Node.js, TypeScript, Prisma, JWT, and Zod
 
-This repository is scaffolded for Phase 2 implementation. Domain modules exist as structure only; feature logic is intentionally not implemented yet.
+This repository contains a fully scaffolded Phase 2 implementation. All backend modules (auth, resumes, jobs, matching, interview, applications, profiles, uploads, users) are implemented with controllers, services, routes, Zod validation, rate limiting, and audit logging. The frontend covers auth, dashboard, job CRUD, resume management with upload, applications with recruiter status updates, AI-powered match preview, and interview question generation.
 
 ## Repository Layout
 
@@ -200,6 +200,15 @@ The backend is designed to run on Render Free Tier with Neon PostgreSQL.
 8. Set JWT, bcrypt, and Cloudinary environment variables.
 9. Deploy migrations with `npm run db:deploy` when schema changes are committed.
 10. Verify the service with `GET /health`.
+
+Generate separate JWT secrets before deploying:
+
+```bash
+openssl rand -base64 48
+openssl rand -base64 48
+```
+
+For an existing manually-created Render web service, add the required variables in the Render Environment tab. `render.yaml` documents required secrets with `sync: false`, but Render will not fill secret values into an existing service automatically.
 
 ## Environment Templates
 

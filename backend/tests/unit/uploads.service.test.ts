@@ -28,6 +28,7 @@ describe('UploadService', () => {
       }),
       deleteFile: vi.fn().mockResolvedValue(undefined),
       createSignedUrl: vi.fn().mockReturnValue('https://signed.example/upload'),
+      downloadFile: vi.fn().mockResolvedValue(Buffer.from('test')),
     };
 
     const { UploadService } = await import('../../src/modules/uploads/uploads.service');
@@ -47,7 +48,7 @@ describe('UploadService', () => {
 
     expect(storage.uploadFile).toHaveBeenCalledTimes(1);
     expect(storage.createSignedUrl).toHaveBeenCalledTimes(1);
-    expect(result.upload.originalName).toBe('resume.pdf');
+    expect(result.uploadedFile.fileName).toBe('resume.pdf');
     expect(state.uploads).toHaveLength(1);
   });
 
@@ -57,6 +58,7 @@ describe('UploadService', () => {
       uploadFile: vi.fn(),
       deleteFile: vi.fn(),
       createSignedUrl: vi.fn(),
+      downloadFile: vi.fn(),
     };
 
     const { UploadService } = await import('../../src/modules/uploads/uploads.service');
@@ -86,9 +88,10 @@ describe('UploadService', () => {
       }),
       deleteFile: vi.fn().mockResolvedValue(undefined),
       createSignedUrl: vi.fn().mockReturnValue('https://signed.example/upload'),
+      downloadFile: vi.fn().mockResolvedValue(Buffer.from('test')),
     };
 
-    prismaMock.upload.create = vi.fn().mockRejectedValue(new Error('db failure'));
+    prismaMock.uploadedFile.create = vi.fn().mockRejectedValue(new Error('db failure'));
 
     const { UploadService } = await import('../../src/modules/uploads/uploads.service');
     const service = new UploadService({

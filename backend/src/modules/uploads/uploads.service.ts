@@ -1,8 +1,9 @@
-import type { Upload, UploadResourceType } from '@prisma/client';
+import type { UploadAuditEventType, UploadedFile } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
 import { prisma } from '../../config/prisma';
 import { ApiError } from '../../utils/api-error';
+import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import {
   ALLOWED_UPLOAD_EXTENSIONS,
   ALLOWED_UPLOAD_MIME_TYPES,
@@ -10,39 +11,69 @@ import {
   UPLOAD_MAX_FILE_SIZE_BYTES,
 } from './uploads.constants';
 import { cloudinaryStorage } from '../../providers/storage/cloudinary.storage';
-import type { UploadResponseDto } from './uploads.types';
+import type { UploadAuditInput, UploadedFileResponseDto, UploadListQuery } from './uploads.types';
 
 type UploadDelegate = {
   create(args: {
     data: {
-      userId: string;
-      originalName: string;
-      fileExtension: string;
-      mimeType: string;
-      fileSizeBytes: number;
+      ownerId: string;
+      fileName: string;
+      fileType: string;
+      fileSize: number;
       cloudinaryPublicId: string;
-      cloudinarySecureUrl: string;
-      cloudinaryResourceType: UploadResourceType;
+      fileUrl: string;
     };
-  }): Promise<Upload>;
+  }): Promise<UploadedFile>;
   findUnique(args: {
     where: {
       id: string;
     };
-  }): Promise<Upload | null>;
+  }): Promise<UploadedFile | null>;
   update(args: {
     where: {
       id: string;
     };
     data: {
       deletedAt?: Date | null;
-      cloudinarySecureUrl?: string;
+      fileUrl?: string;
     };
-  }): Promise<Upload>;
+  }): Promise<UploadedFile>;
+  findMany(args: {
+    where: {
+      ownerId: string;
+      deletedAt: null;
+    };
+    orderBy: {
+      createdAt: 'desc';
+    };
+    skip?: number;
+    take?: number;
+  }): Promise<UploadedFile[]>;
+  count(args: {
+    where: {
+      ownerId: string;
+      deletedAt: null;
+    };
+  }): Promise<number>;
 };
 
 type UploadPrismaClient = {
-  upload: UploadDelegate;
+  uploadedFile: UploadDelegate;
+  uploadAuditEvent: {
+    create(args: {
+      data: {
+        eventType: UploadAuditEventType;
+        success: boolean;
+        ownerId?: string;
+        uploadedFileId?: string;
+        fileName?: string;
+        reason?: string;
+        ipAddress?: string;
+        userAgent?: string;
+        metadata?: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
 };
 
 type UploadServiceDependencies = {
@@ -68,12 +99,12 @@ function normalizeExtension(fileName: string) {
   return extension;
 }
 
-function toResourceType(extension: string): UploadResourceType {
+function toResourceType(extension: string): 'image' | 'raw' {
   if (extension === 'pdf' || extension === 'docx') {
-    return 'RAW';
+    return 'raw';
   }
 
-  return 'IMAGE';
+  return 'image';
 }
 
 function assertAllowedUpload(file: FileLike) {
@@ -131,45 +162,38 @@ export class UploadService {
   private readonly storage: typeof cloudinaryStorage;
 
   constructor(dependencies: UploadServiceDependencies = {}) {
-    this.prismaClient = dependencies.prismaClient ?? prisma;
+    this.prismaClient = dependencies.prismaClient ?? (prisma as unknown as UploadPrismaClient);
     this.storage = dependencies.storage ?? cloudinaryStorage;
   }
 
-  async createUpload(userId: string, file: FileLike): Promise<UploadResponseDto> {
+  async createUpload(userId: string, file: FileLike): Promise<UploadedFileResponseDto> {
     const validated = assertAllowedUpload(file);
-
-    this.runScanHookPlaceholder({
-      userId,
-      file,
-    });
 
     const uploadResult = await this.storage.uploadFile({
       buffer: file.buffer,
       originalName: file.originalname,
       folder: UPLOAD_FOLDER,
-      resourceType: validated.resourceType === 'RAW' ? 'raw' : 'image',
+      resourceType: validated.resourceType,
     });
 
-    let upload: Upload;
+    let uploadedFile: UploadedFile;
 
     try {
-      upload = await this.prismaClient.upload.create({
+      uploadedFile = await this.prismaClient.uploadedFile.create({
         data: {
-          userId,
-          originalName: file.originalname,
-          fileExtension: validated.extension,
-          mimeType: file.mimetype,
-          fileSizeBytes: file.size,
+          ownerId: userId,
+          fileName: file.originalname,
+          fileType: file.mimetype,
+          fileSize: file.size,
           cloudinaryPublicId: uploadResult.publicId,
-          cloudinarySecureUrl: uploadResult.secureUrl,
-          cloudinaryResourceType: validated.resourceType,
+          fileUrl: uploadResult.secureUrl,
         },
       });
     } catch (error) {
       try {
         await this.storage.deleteFile({
           publicId: uploadResult.publicId,
-          resourceType: validated.resourceType === 'RAW' ? 'raw' : 'image',
+          resourceType: validated.resourceType,
         });
       } catch {
         // Best-effort cleanup only. The original persistence error is the primary failure.
@@ -179,51 +203,51 @@ export class UploadService {
     }
 
     return {
-      upload,
+      uploadedFile,
       signedUrl: this.storage.createSignedUrl({
-        publicId: upload.cloudinaryPublicId,
-        resourceType: upload.cloudinaryResourceType === 'RAW' ? 'raw' : 'image',
+        publicId: uploadedFile.cloudinaryPublicId,
+        resourceType: validated.resourceType,
       }),
     };
   }
 
-  async getUpload(userId: string, uploadId: string): Promise<UploadResponseDto> {
-    const upload = await this.prismaClient.upload.findUnique({
+  async getUpload(userId: string, uploadId: string): Promise<UploadedFileResponseDto> {
+    const uploadedFile = await this.prismaClient.uploadedFile.findUnique({
       where: {
         id: uploadId,
       },
     });
 
-    if (!upload || upload.userId !== userId || upload.deletedAt) {
+    if (!uploadedFile || uploadedFile.ownerId !== userId || uploadedFile.deletedAt) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'UPLOAD_NOT_FOUND', 'Upload not found');
     }
 
     return {
-      upload,
+      uploadedFile,
       signedUrl: this.storage.createSignedUrl({
-        publicId: upload.cloudinaryPublicId,
-        resourceType: upload.cloudinaryResourceType === 'RAW' ? 'raw' : 'image',
+        publicId: uploadedFile.cloudinaryPublicId,
+        resourceType: toResourceType(normalizeExtension(uploadedFile.fileName)),
       }),
     };
   }
 
-  async deleteUpload(userId: string, uploadId: string): Promise<{ uploadId: string }> {
-    const upload = await this.prismaClient.upload.findUnique({
+  async deleteUpload(userId: string, uploadId: string): Promise<{ uploadedFileId: string }> {
+    const uploadedFile = await this.prismaClient.uploadedFile.findUnique({
       where: {
         id: uploadId,
       },
     });
 
-    if (!upload || upload.userId !== userId || upload.deletedAt) {
+    if (!uploadedFile || uploadedFile.ownerId !== userId || uploadedFile.deletedAt) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'UPLOAD_NOT_FOUND', 'Upload not found');
     }
 
     await this.storage.deleteFile({
-      publicId: upload.cloudinaryPublicId,
-      resourceType: upload.cloudinaryResourceType === 'RAW' ? 'raw' : 'image',
+      publicId: uploadedFile.cloudinaryPublicId,
+      resourceType: toResourceType(normalizeExtension(uploadedFile.fileName)),
     });
 
-    await this.prismaClient.upload.update({
+    await this.prismaClient.uploadedFile.update({
       where: {
         id: uploadId,
       },
@@ -233,11 +257,57 @@ export class UploadService {
     });
 
     return {
-      uploadId,
+      uploadedFileId: uploadId,
     };
   }
 
-  private runScanHookPlaceholder(_input: { userId: string; file: FileLike }): void {
-    return;
+  async listUploads(userId: string, query: UploadListQuery = {}): Promise<{ items: UploadedFileResponseDto[]; total: number; page: number; limit: number; totalPages: number }> {
+    const { page, limit, skip } = parsePagination(query);
+
+    const where = {
+      ownerId: userId,
+      deletedAt: null,
+    };
+
+    const [uploadedFiles, total] = await Promise.all([
+      this.prismaClient.uploadedFile.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prismaClient.uploadedFile.count({ where }),
+    ]);
+
+    const items = uploadedFiles.map(uploadedFile => ({
+      uploadedFile,
+      signedUrl: this.storage.createSignedUrl({
+        publicId: uploadedFile.cloudinaryPublicId,
+        resourceType: toResourceType(normalizeExtension(uploadedFile.fileName)),
+      }),
+    }));
+
+    return buildPaginatedResponse(items, total, page, limit);
   }
-}
+
+  async recordAuditEvent(eventType: UploadAuditEventType, input: UploadAuditInput): Promise<void> {
+    try {
+      await this.prismaClient.uploadAuditEvent.create({
+        data: {
+          eventType,
+          success: input.success,
+          ownerId: input.ownerId,
+          uploadedFileId: input.uploadedFileId,
+          fileName: input.fileName,
+          reason: input.reason,
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+          metadata: input.metadata,
+        },
+      });
+    } catch {
+      // Audit logging must not block the user-facing upload workflow.
+    }
+  }}

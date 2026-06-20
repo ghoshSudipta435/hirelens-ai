@@ -1,4 +1,4 @@
-# API Specification V2
+# API Specification
 
 Base path: `/api/v1`
 
@@ -6,12 +6,27 @@ All protected endpoints require `Authorization: Bearer <token>`.
 
 ## Standard Response Shapes
 
-### Success
+### Success (single)
 
 ```json
 {
   "success": true,
-  "data": {}
+  "data": { }
+}
+```
+
+### Success (paginated list)
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "page": 1,
+    "limit": 20,
+    "total": 42,
+    "totalPages": 3
+  }
 }
 ```
 
@@ -28,14 +43,19 @@ All protected endpoints require `Authorization: Bearer <token>`.
 }
 ```
 
+## Health
+
+### GET `/health`
+
+No auth required.
+
 ## Auth
 
 ### POST `/auth/register`
 
-Registers a student or recruiter account.
+Registers a student or recruiter account. Rate-limited.
 
 Request:
-
 ```json
 {
   "name": "Ava Sharma",
@@ -45,8 +65,7 @@ Request:
 }
 ```
 
-Response:
-
+Response (201):
 ```json
 {
   "success": true,
@@ -64,222 +83,330 @@ Response:
 
 ### POST `/auth/login`
 
-Authenticates a user and returns an access token plus a refresh token.
+Authenticates a user. Rate-limited.
+
+```json
+{
+  "email": "ava@example.com",
+  "password": "StrongPassword123!"
+}
+```
+
+Returns `{ user, accessToken }`.
 
 ### POST `/auth/refresh`
 
-Rotates a valid refresh token and returns a new access token plus refresh token pair.
+Rotates a valid refresh token. Rate-limited.
+
+```json
+{ "refreshToken": "..." }
+```
+
+Returns `{ accessToken, refreshToken }`.
 
 ### POST `/auth/logout`
 
-Revokes the submitted refresh token.
+Revokes the submitted refresh token. Rate-limited.
+
+```json
+{ "refreshToken": "..." }
+```
 
 ### GET `/auth/profile`
 
-Returns the authenticated user profile.
+Returns the authenticated user with their profile (student or recruiter).
 
-## Users
+## Profiles
 
-### PATCH `/users/me`
+### GET `/profile`
 
-Updates allowed profile fields for the authenticated user.
+Returns the current user's profile with role-specific data.
+
+### PATCH `/profile`
+
+Updates the current user's profile. Body differs by role.
+
+**Student fields:** `fullName`, `headline`, `university`, `degree`, `graduationYear`, `githubUrl`, `linkedinUrl`, `portfolioUrl`, `bio`
+
+**Recruiter fields:** `companyName`, `companyWebsite`, `designation`, `bio`
+
+At least one field required.
+
+### GET `/profile/:userId`
+
+Returns a user's public profile by user ID.
+
+## Uploads
+
+### POST `/uploads`
+
+Upload a file (resume PDF/DOCX or image). Rate-limited (20/hour). Multipart with field name `file`.
+
+Allowed types: PDF, DOCX, PNG, JPEG. Max 10 MB.
+
+Response (201):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "upl_123",
+    "fileName": "resume.pdf",
+    "fileSize": 123456,
+    "fileType": "application/pdf",
+    "fileUrl": "https://res.cloudinary.com/...",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### GET `/uploads`
+
+Lists the authenticated user's uploads. Paginated.
+
+Query: `?page=1&limit=20`
+
+### GET `/uploads/:id`
+
+Returns a single upload owned by the authenticated user.
+
+### DELETE `/uploads/:id`
+
+Soft-deletes a single upload (Cloudinary + DB). Owned by the authenticated user.
 
 ## Resumes
 
 ### POST `/resumes`
 
-Upload a PDF resume for the authenticated student.
-
-Multipart fields:
-
-- `file`: PDF file
-- `label`: optional human-readable name
-
-Response data:
+Creates a resume from an uploaded file.
 
 ```json
 {
-  "id": "res_123",
-  "status": "READY",
-  "fileUrl": "https://...",
-  "parsedTextAvailable": true,
-  "skills": ["TypeScript", "React", "PostgreSQL"]
+  "uploadedFileId": "upl_123",
+  "title": "Software Engineering Intern Resume"
+}
+```
+
+Response (201):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "res_123",
+    "ownerId": "usr_123",
+    "uploadedFileId": "upl_123",
+    "title": "Software Engineering Intern Resume",
+    "version": 1,
+    "status": "DRAFT",
+    "createdAt": "...",
+    "updatedAt": "...",
+    "fileUrl": "https://..."
+  }
 }
 ```
 
 ### GET `/resumes`
 
-Lists the authenticated student’s resumes.
+Lists the authenticated student's resumes. Paginated.
 
-### GET `/resumes/:resumeId`
+Query: `?page=1&limit=20`
 
-### DELETE `/resumes/:resumeId`
+### GET `/resumes/:id`
 
-Archive a resume owned by the authenticated student.
+Returns a single resume owned by the authenticated student.
 
-## Job Postings
+### PATCH `/resumes/:id`
+
+Updates resume title and/or status.
+
+```json
+{ "title": "Updated Title", "status": "ACTIVE" }
+```
+
+Only one resume per title group can be ACTIVE at a time.
+
+### DELETE `/resumes/:id`
+
+Soft-deletes a resume owned by the authenticated student.
+
+## Jobs
 
 ### POST `/jobs`
 
-Recruiter-only endpoint.
-
-Request:
+Recruiter-only. Creates a job posting.
 
 ```json
 {
   "title": "Backend Engineer Intern",
-  "description": "Build Node.js APIs with PostgreSQL and Docker.",
+  "description": "Build Node.js APIs...",
   "employmentType": "INTERNSHIP",
-  "locationMode": "REMOTE"
+  "locationMode": "REMOTE",
+  "extractedSkills": ["Node.js", "PostgreSQL"],
+  "status": "DRAFT"
 }
 ```
 
 ### GET `/jobs`
 
-Public list of active job postings with pagination.
+Lists active (non-deleted) job postings. Paginated.
 
-### GET `/jobs/:jobId`
+Query: `?page=1&limit=20&status=ACTIVE&search=node&employmentType=INTERNSHIP&locationMode=REMOTE`
 
-### PATCH `/jobs/:jobId`
+### GET `/jobs/:id`
 
-Recruiter owner only.
+Returns a single job posting with recruiter info.
 
-### DELETE `/jobs/:jobId`
+### PATCH `/jobs/:id`
 
-Archive recruiter-owned posting.
+Recruiter-owner only. Updates job posting fields.
+
+### DELETE `/jobs/:id`
+
+Recruiter-owner only. Soft-deletes a job posting.
 
 ## Applications
 
 ### POST `/applications`
 
-Student applies to a recruiter job using an owned resume.
-
-Request:
-
-```json
-{
-  "jobId": "job_123",
-  "resumeId": "res_123"
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "data": {
-    "application": {
-      "id": "app_123",
-      "status": "SUBMITTED"
-    },
-    "latestMatchResult": {
-      "score": 85,
-      "matchedSkills": ["Node.js", "PostgreSQL"],
-      "missingSkills": ["Docker", "Redis"],
-      "scoreVersion": "v1"
-    }
-  }
-}
-```
-
-### GET `/applications/me`
-
-Student lists own applications.
-
-### GET `/jobs/:jobId/applications`
-
-Recruiter lists applications for own job posting.
-
-## Matching
-
-### POST `/matching/preview`
-
-Student-only endpoint for matching a resume against a pasted custom JD without creating a recruiter job posting.
-
-Request:
+Student-only. Applies to a job with a resume.
 
 ```json
 {
   "resumeId": "res_123",
-  "jobTitle": "Backend Engineer Intern",
-  "jobDescription": "Need Node.js, PostgreSQL, Docker, and Redis."
+  "jobPostingId": "job_123"
 }
 ```
 
-Response:
+Validates that resume is ACTIVE, job is ACTIVE, and no duplicate exists.
 
+Response (201):
 ```json
 {
   "success": true,
   "data": {
+    "id": "app_123",
+    "resumeId": "res_123",
+    "jobPostingId": "job_123",
+    "status": "SUBMITTED",
+    "resume": { "id": "res_123", "title": "...", "version": 1 },
+    "jobPosting": { "id": "job_123", "title": "...", "employmentType": "INTERNSHIP", "locationMode": "REMOTE" },
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+}
+```
+
+### GET `/applications`
+
+Lists applications. Students see their own; recruiters see applications to their jobs. Paginated.
+
+Query: `?page=1&limit=20&status=SUBMITTED&jobPostingId=job_123`
+
+### GET `/applications/:id`
+
+Returns a single application with auth check (student owns resume or recruiter owns job).
+
+### PATCH `/applications/:id/status`
+
+Recruiter-only. Updates application status.
+
+```json
+{ "status": "REVIEWED" }
+```
+
+## Matching
+
+### POST `/matches/preview`
+
+Student-only. Rate-limited (10/min). Generates an AI match score between a resume and a job.
+
+```json
+{
+  "resumeId": "res_123",
+  "jobPostingId": "job_123"
+}
+```
+
+Response (201):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "match_123",
+    "contextType": "PREVIEW",
     "score": 75,
     "matchedSkills": ["Node.js", "PostgreSQL"],
     "missingSkills": ["Docker", "Redis"],
     "strengths": ["Relevant backend project experience"],
-    "scoreVersion": "v1"
+    "scoreVersion": "1.0.0",
+    "resume": { "id": "res_123", "title": "..." },
+    "jobPosting": { "id": "job_123", "title": "..." },
+    "createdAt": "..."
   }
 }
 ```
 
-## Interview
+### GET `/matches`
 
-### POST `/interview/generate`
+Lists the authenticated student's match results. Paginated.
 
-Request:
+Query: `?page=1&limit=20`
+
+### GET `/matches/:id`
+
+Returns a single match result by ID.
+
+## Interviews
+
+### POST `/interviews/generate`
+
+Recruiter-only. Rate-limited (10/min). Generates AI interview questions from a match result.
 
 ```json
 {
-  "resumeId": "res_123",
-  "jobId": "job_123"
+  "matchResultId": "match_123"
 }
 ```
 
-Response:
-
+Response (201):
 ```json
 {
   "success": true,
   "data": {
+    "id": "qs_123",
+    "matchResultId": "match_123",
     "questions": [
       {
+        "id": "q_1",
         "question": "How would you design a REST API for resume screening?",
         "difficulty": "MEDIUM",
         "category": "SYSTEM_DESIGN"
       }
-    ]
+    ],
+    "createdAt": "..."
   }
 }
 ```
 
-## Recruiter Ranking
+### GET `/interviews/:id`
 
-### GET `/jobs/:jobId/rankings`
+Returns a question set by ID with all questions.
 
-Recruiter owner only.
+## Users
 
-Response includes paginated ranking rows with candidate, score, explainability, and application status.
+### GET `/users`
 
-## Pagination Contract
+Recruiter-only. Lists all users. Paginated.
 
-List endpoints return:
+Query: `?page=1&limit=20&role=STUDENT&search=ava`
 
-```json
-{
-  "success": true,
-  "data": {
-    "items": [],
-    "page": 1,
-    "pageSize": 10,
-    "totalItems": 42,
-    "totalPages": 5
-  }
-}
-```
+### GET `/users/:id`
 
-## Authorization Rules
+Returns a single user by ID.
 
-- Students cannot access other students’ resumes or applications.
-- Recruiters can only manage job postings they created.
-- Recruiters can only access applications and rankings for their own job postings.
-- Students can only generate interview questions using their own resume and an accessible job context.
+## Authorization Summary
+
+| Role | Can do |
+|------|--------|
+| STUDENT | Manage own resumes, uploads, and applications; preview matches |
+| RECRUITER | Manage own job postings; review applications; generate interview questions; list users |
+| Both | Read own profile; update own profile; list jobs |

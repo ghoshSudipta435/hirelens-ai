@@ -1,0 +1,6 @@
+export type UserListQuery = {
+  page?: number;
+  limit?: number;
+  role?: string;
+  search?: string;
+};

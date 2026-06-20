@@ -35,6 +35,18 @@ The backend is deployed as a Render Free Tier web service and uses Neon PostgreS
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 
+Generate separate JWT secrets with at least 32 characters:
+
+```bash
+openssl rand -base64 48
+openssl rand -base64 48
+```
+
+Use the first value for `JWT_SECRET` and the second value for `JWT_REFRESH_SECRET`.
+
+For an existing Render web service, add these values manually in Render Dashboard -> service -> Environment.
+The `sync: false` entries in `render.yaml` tell Render which variables are required when creating a service from a blueprint, but they do not populate secrets into an already-created manual web service.
+
 ### Health check
 
 - `GET /health`
@@ -47,5 +59,6 @@ Render should use this endpoint for uptime checks.
 - Keep `DATABASE_URL` on the pooled Neon endpoint to support runtime traffic.
 - Keep `DIRECT_URL` on the direct Neon endpoint to support migrations.
 - Keep `npm install --include=dev` in the Render build command because TypeScript, Prisma CLI, and Node type definitions are build-time dependencies.
+- Set every `sync: false` variable from `render.yaml` in the Render Environment tab before deploying. An unset secret will crash startup by design.
 - Rotate JWT secrets before production launch.
 - Set `LOG_LEVEL=info` in production.

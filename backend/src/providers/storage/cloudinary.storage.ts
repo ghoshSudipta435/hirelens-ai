@@ -20,6 +20,7 @@ export type CloudinaryStorage = {
   uploadFile(input: CloudinaryUploadInput): Promise<CloudinaryUploadResult>;
   deleteFile(input: { publicId: string; resourceType: UploadResourceType }): Promise<void>;
   createSignedUrl(input: { publicId: string; resourceType: UploadResourceType }): string;
+  downloadFile(input: { url: string }): Promise<Buffer>;
 };
 
 function normalizeCloudinaryResourceType(resourceType: UploadResourceType) {
@@ -39,7 +40,6 @@ function uploadBufferStream(
       {
         folder: options.folder,
         resource_type: normalizeCloudinaryResourceType(options.resourceType),
-        public_id: options.originalName,
         use_filename: false,
         unique_filename: true,
         overwrite: false,
@@ -68,6 +68,13 @@ function uploadBufferStream(
   });
 }
 
+async function downloadFromUrl(url: string): Promise<Buffer> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
 export const cloudinaryStorage: CloudinaryStorage = {
   uploadFile: async ({ buffer, folder, originalName, resourceType }) => {
     const result = await uploadBufferStream(buffer, { folder, originalName, resourceType });
@@ -89,4 +96,5 @@ export const cloudinaryStorage: CloudinaryStorage = {
       sign_url: true,
       resource_type: normalizeCloudinaryResourceType(resourceType),
     }),
+  downloadFile: async ({ url }) => downloadFromUrl(url),
 };

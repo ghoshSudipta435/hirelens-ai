@@ -1,16 +1,29 @@
-import type { UploadResourceType } from '@prisma/client';
+import type { UploadedFile } from '@prisma/client';
 
-import type { Upload } from '@prisma/client';
-
-export type UploadResponseDto = {
-  upload: Upload;
+export type UploadedFileResponseDto = {
+  uploadedFile: UploadedFile;
   signedUrl: string;
 };
 
 export type UploadFileContext = {
-  originalName: string;
+  fileName: string;
   mimeType: string;
-  fileExtension: string;
-  fileSizeBytes: number;
-  resourceType: UploadResourceType;
+  fileSize: number;
+  resourceType: 'image' | 'raw';
+};
+
+export type UploadListQuery = {
+  page?: number;
+  limit?: number;
+};
+
+export type UploadAuditInput = {
+  ownerId: string;
+  uploadedFileId?: string;
+  fileName?: string;
+  success: boolean;
+  reason?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown>;
 };

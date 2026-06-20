@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hirelens
+      POSTGRES_PASSWORD: hirelens_dev
+      POSTGRES_DB: hirelens
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hirelens']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      target: backend
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: development
+      PORT: '4000'
+      API_PREFIX: /api/v1
+      CLIENT_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://hirelens:hirelens_dev@postgres:5432/hirelens?sslmode=disable
+      DIRECT_URL: postgresql://hirelens:hirelens_dev@postgres:5432/hirelens?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-at-least-32-characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-jwt-refresh-secret-at-least-32}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+    ports:
+      - '3000:3000'
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

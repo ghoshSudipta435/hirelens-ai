@@ -55,6 +55,7 @@ describe('auth routes', () => {
     prismaFixture.state.recruiterProfiles.length = 0;
     prismaFixture.state.refreshTokens.length = 0;
     prismaFixture.state.uploads.length = 0;
+    prismaFixture.state.uploadAuditEvents.length = 0;
     prismaFixture.state.authAuditEvents.length = 0;
     process.env.NODE_ENV = 'test';
     process.env.CLIENT_ORIGIN = 'http://localhost:3000';
