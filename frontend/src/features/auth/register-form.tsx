@@ -32,8 +32,12 @@ export function RegisterForm() {
 
   const onSubmit = handleSubmit(async ({ confirmPassword, ...values }) => {
     void confirmPassword;
-    await registerMutation.mutateAsync(values);
-    router.replace('/complete-profile');
+    try {
+      await registerMutation.mutateAsync(values);
+      router.replace('/complete-profile');
+    } catch {
+      // Mutation onError already shows toast
+    }
   });
 
   return (

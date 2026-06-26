@@ -2,12 +2,13 @@ import { Prisma, type PrismaClient, type EmploymentType, JobPostingStatus, type 
 import { StatusCodes } from 'http-status-codes';
 
 import { prisma } from '../../config/prisma';
+import { providers } from '../../config/providers';
 import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import type { CreateJobInputDto, UpdateJobInputDto } from './jobs.schemas';
 import type { JobPostingListQuery, PaginatedResponse } from './jobs.types';
 
-type JobPrismaClient = Pick<PrismaClient, 'jobPosting' | '$transaction'>;
+type JobPrismaClient = Pick<PrismaClient, 'jobPosting'>;
 
 export class JobService {
   private readonly prismaClient: JobPrismaClient;
@@ -17,17 +18,21 @@ export class JobService {
   }
 
   async createJob(recruiterId: string, data: CreateJobInputDto) {
-    return this.prismaClient.jobPosting.create({
+    const job = await this.prismaClient.jobPosting.create({
       data: {
         recruiterId,
         title: data.title,
         description: data.description,
-        extractedSkills: data.extractedSkills,
+        extractedSkills: [],
         employmentType: data.employmentType,
         locationMode: data.locationMode,
         status: data.status ?? JobPostingStatus.DRAFT,
       },
     });
+
+    this.extractAndUpdateSkills(job.id, data.description).catch(() => {});
+
+    return job;
   }
 
   async getJob(jobId: string) {
@@ -92,47 +97,64 @@ export class JobService {
   }
 
   async updateJob(recruiterId: string, jobId: string, data: UpdateJobInputDto) {
-    return this.prismaClient.$transaction(async (tx) => {
-      const job = await tx.jobPosting.findUnique({
-        where: { id: jobId },
-      });
-
-      if (!job || job.recruiterId !== recruiterId || job.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
-      }
-
-      return tx.jobPosting.update({
-        where: { id: jobId },
-        data: {
-          ...(data.title !== undefined && { title: data.title }),
-          ...(data.description !== undefined && { description: data.description }),
-          ...(data.extractedSkills !== undefined && { extractedSkills: data.extractedSkills }),
-          ...(data.employmentType !== undefined && { employmentType: data.employmentType }),
-          ...(data.locationMode !== undefined && { locationMode: data.locationMode }),
-          ...(data.status !== undefined && { status: data.status }),
-        },
-      });
+    const job = await this.prismaClient.jobPosting.findUnique({
+      where: { id: jobId },
     });
+
+    if (!job || job.recruiterId !== recruiterId || job.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
+    }
+
+    const updateData: Prisma.JobPostingUpdateInput = {};
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.employmentType !== undefined) updateData.employmentType = data.employmentType;
+    if (data.locationMode !== undefined) updateData.locationMode = data.locationMode;
+    if (data.status !== undefined) updateData.status = data.status;
+
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+
+    const updated = await this.prismaClient.jobPosting.update({
+      where: { id: jobId },
+      data: updateData,
+    });
+
+    if (data.description !== undefined) {
+      this.extractAndUpdateSkills(jobId, data.description).catch(() => {});
+    }
+
+    return updated;
   }
 
   async deleteJob(recruiterId: string, jobId: string): Promise<{ jobId: string }> {
-    return this.prismaClient.$transaction(async (tx) => {
-      const job = await tx.jobPosting.findUnique({
-        where: { id: jobId },
-      });
-
-      if (!job || job.recruiterId !== recruiterId || job.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
-      }
-
-      await tx.jobPosting.update({
-        where: { id: jobId },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
-
-      return { jobId };
+    const job = await this.prismaClient.jobPosting.findUnique({
+      where: { id: jobId },
     });
+
+    if (!job || job.recruiterId !== recruiterId || job.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
+    }
+
+    await this.prismaClient.jobPosting.update({
+      where: { id: jobId },
+      data: { deletedAt: new Date() },
+    });
+
+    return { jobId };
+  }
+
+  private async extractAndUpdateSkills(jobId: string, description: string): Promise<void> {
+    try {
+      const ai = await providers.getAI();
+      const skills = await ai.extractSkillsFromText(description);
+      await this.prismaClient.jobPosting.update({
+        where: { id: jobId },
+        data: { extractedSkills: skills },
+      });
+    } catch {
+      // Best-effort skill extraction; job is already created
+    }
   }
 }

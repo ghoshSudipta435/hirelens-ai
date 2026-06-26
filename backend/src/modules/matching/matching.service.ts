@@ -81,12 +81,12 @@ export class MatchingService {
     return matchResult;
   }
 
-  async getMatch(matchId: string) {
+  async getMatch(matchId: string, userId: string, role: string) {
     const match = await this.prismaClient.matchResult.findUnique({
       where: { id: matchId, deletedAt: null },
       include: {
-        resume: { select: { id: true, title: true } },
-        jobPosting: { select: { id: true, title: true } },
+        resume: { select: { id: true, title: true, ownerId: true } },
+        jobPosting: { select: { id: true, title: true, recruiterId: true } },
       },
     });
 
@@ -94,16 +94,28 @@ export class MatchingService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'MATCH_NOT_FOUND', 'Match result not found');
     }
 
+    if (role === 'STUDENT' && match.resume.ownerId !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'Access denied');
+    }
+    if (role === 'RECRUITER' && match.jobPosting?.recruiterId !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'Access denied');
+    }
+
     return match;
   }
 
-  async listMatches(userId: string, query: MatchListQuery) {
+  async listMatches(userId: string, role: string, query: MatchListQuery) {
     const { page, limit, skip } = parsePagination(query);
 
-    const where = {
+    const where: Record<string, unknown> = {
       deletedAt: null,
-      resume: { ownerId: userId, deletedAt: null },
     };
+
+    if (role === 'STUDENT') {
+      where.resume = { ownerId: userId, deletedAt: null };
+    } else if (role === 'RECRUITER') {
+      where.jobPosting = { recruiterId: userId, deletedAt: null };
+    }
 
     const [items, total] = await Promise.all([
       this.prismaClient.matchResult.findMany({

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { useToastStore } from '@/stores/toast.store';
 import type { UploadedFile } from '@/types/upload';
 import { useUploadFileMutation } from './use-upload-mutations';
 
@@ -14,11 +15,17 @@ type UploadFormProps = {
 export function UploadForm({ onUploadComplete, accept = 'application/pdf', maxSizeMB = 10 }: UploadFormProps) {
   const [dragOver, setDragOver] = useState(false);
   const uploadMutation = useUploadFileMutation();
+  const pushToast = useToastStore((state) => state.pushToast);
   const maxBytes = maxSizeMB * 1024 * 1024;
 
   const handleFile = useCallback(
     async (file: File) => {
       if (file.size > maxBytes) {
+        pushToast({
+          title: 'File too large',
+          description: `Maximum file size is ${maxSizeMB}MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
+          variant: 'error',
+        });
         return;
       }
       try {
@@ -28,7 +35,7 @@ export function UploadForm({ onUploadComplete, accept = 'application/pdf', maxSi
         // error toast handled by mutation
       }
     },
-    [uploadMutation, onUploadComplete, maxBytes, maxSizeMB],
+    [uploadMutation, onUploadComplete, maxBytes, maxSizeMB, pushToast],
   );
 
   const handleDrop = useCallback(

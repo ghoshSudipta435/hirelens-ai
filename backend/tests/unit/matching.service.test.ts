@@ -59,13 +59,23 @@ describe('MatchingService', () => {
     const { MatchingService } = await import('../../src/modules/matching/matching.service');
     const service = new MatchingService({ prismaClient: prismaMock });
 
+    state.resumes.push({
+      id: 'resume-1', ownerId: 'student-1', uploadedFileId: 'file-1', title: 'My Resume',
+      version: 1, status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date(), deletedAt: null,
+    });
+    state.jobPostings.push({
+      id: 'job-1', recruiterId: 'recruiter-1', title: 'Engineer', description: 'We need TypeScript and React',
+      extractedSkills: ['TypeScript', 'React', 'Python'],
+      employmentType: 'FULL_TIME', locationMode: 'REMOTE', status: 'ACTIVE',
+      createdAt: new Date(), updatedAt: new Date(), deletedAt: null,
+    });
     state.matchResults.push({
       id: 'match-1', contextType: 'PREVIEW', resumeId: 'resume-1', jobPostingId: 'job-1',
       score: 90, matchedSkills: [], missingSkills: [], strengths: [], scoreVersion: '1.0.0',
       createdAt: new Date(),
     });
 
-    const match = await service.getMatch('match-1');
+    const match = await service.getMatch('match-1', 'student-1', 'STUDENT');
     expect(match.score).toBe(90);
   });
 
@@ -84,7 +94,7 @@ describe('MatchingService', () => {
       createdAt: new Date(),
     });
 
-    const result = await service.listMatches('student-1', { page: 1, limit: 10 });
+    const result = await service.listMatches('student-1', 'STUDENT', { page: 1, limit: 10 });
     expect(result.items).toHaveLength(1);
   });
 });

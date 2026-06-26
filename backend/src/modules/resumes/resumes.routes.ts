@@ -43,3 +43,16 @@ resumesRouter.delete(
   validateRequest({ params: resumeParamsSchema }),
   resumeController.deleteResume,
 );
+
+resumesRouter.post(
+  '/:id/reparse',
+  authenticateAccessToken,
+  validateRequest({ params: resumeParamsSchema }),
+  resumeController.reparseResume,
+);
+
+resumesRouter.post(
+  '/reparse-all',
+  authenticateAccessToken,
+  resumeController.reparseAllResumes,
+);

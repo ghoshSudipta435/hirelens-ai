@@ -18,7 +18,7 @@ export default function NewResumePage() {
           title="Create resume"
           description="Upload a PDF and create a new resume entry"
         >
-          <ResumeCreateForm onSuccess={(id) => router.push(`/resumes`)} />
+          <ResumeCreateForm onSuccess={() => router.push('/resumes')} />
         </PageShell>
       </AppShell>
     </ProtectedRoute>

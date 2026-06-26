@@ -17,7 +17,6 @@ describe('JobService', () => {
       description: 'We need a great engineer',
       employmentType: EmploymentType.FULL_TIME,
       locationMode: LocationMode.REMOTE,
-      extractedSkills: ['TypeScript', 'React'],
     });
 
     expect(job.title).toBe('Software Engineer');

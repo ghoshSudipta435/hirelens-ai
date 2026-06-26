@@ -5,6 +5,7 @@ FROM node:${NODE_VERSION}-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
+COPY backend/prisma ./prisma
 COPY backend/ .
 RUN npx prisma generate && npm run build
 
@@ -24,15 +25,19 @@ WORKDIR /app
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=backend-build /app/backend/node_modules ./node_modules
 COPY --from=backend-build /app/backend/package.json ./
+COPY --from=backend-build /app/backend/prisma ./prisma
 EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:4000/health || exit 1
 CMD ["node", "dist/server.js"]
 
 # ---- Frontend Runtime ----
 FROM node:${NODE_VERSION}-alpine AS frontend
 WORKDIR /app
-COPY --from=frontend-build /app/frontend/.next ./.next
-COPY --from=frontend-build /app/frontend/node_modules ./node_modules
-COPY --from=frontend-build /app/frontend/package.json ./package.json
+COPY --from=frontend-build /app/frontend/.next/standalone ./
+COPY --from=frontend-build /app/frontend/.next/static ./.next/static
 COPY --from=frontend-build /app/frontend/public ./public
 EXPOSE 3000
-CMD ["npm", "start"]
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]

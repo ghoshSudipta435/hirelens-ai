@@ -61,7 +61,7 @@ describe('ResumeService', () => {
     ).rejects.toThrow('Uploaded file not found or unauthorized');
   });
 
-  it('prevents multiple active resumes for the same title group', async () => {
+  it('allows multiple active resumes with the same title', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { ResumeService } = await import('../../src/modules/resumes/resumes.service');
     const service = new ResumeService({ prismaClient: prismaMock });
@@ -90,11 +90,11 @@ describe('ResumeService', () => {
       deletedAt: null,
     });
 
-    await expect(
-      service.updateResume('user-1', 'resume-2', {
-        status: ResumeStatus.ACTIVE,
-      })
-    ).rejects.toThrow('You can only have one ACTIVE resume per title group');
+    const updated = await service.updateResume('user-1', 'resume-2', {
+      status: ResumeStatus.ACTIVE,
+    });
+
+    expect(updated.status).toBe(ResumeStatus.ACTIVE);
   });
 
   it('allows updating to active if no other active resume exists', async () => {

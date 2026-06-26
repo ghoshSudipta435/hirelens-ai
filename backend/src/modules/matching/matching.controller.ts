@@ -27,7 +27,11 @@ export class MatchingController {
 
   getMatch = async (request: MatchParamsRequest, response: Response, next: NextFunction) => {
     try {
-      const result = await this.matchingService.getMatch(request.params.id);
+      const result = await this.matchingService.getMatch(
+        request.params.id,
+        request.auth!.userId,
+        request.auth!.role,
+      );
 
       response.status(StatusCodes.OK).json({
         success: true,
@@ -40,7 +44,11 @@ export class MatchingController {
 
   listMatches = async (request: ListMatchesRequest, response: Response, next: NextFunction) => {
     try {
-      const result = await this.matchingService.listMatches(request.auth!.userId, request.query);
+      const result = await this.matchingService.listMatches(
+        request.auth!.userId,
+        request.auth!.role,
+        request.query,
+      );
 
       response.status(StatusCodes.OK).json({
         success: true,

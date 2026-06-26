@@ -11,21 +11,15 @@ import { PageShell } from '@/components/layout/page-shell';
 import * as matchingService from '@/services/matching.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useGenerateQuestionsMutation } from '@/features/interview/use-interview-mutations';
-import * as interviewService from '@/services/interview.service';
 
 export default function InterviewsPage() {
-  const [page, setPage] = useState(1);
   const user = useAuthStore((state) => state.user);
   const generateMutation = useGenerateQuestionsMutation();
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
 
-  const fetchMatches = useCallback(async () => {
-    return matchingService.listMatches({ page, limit: 20 });
-  }, [page]);
-
   const { data: matches, isLoading, isError, error } = useQuery({
-    queryKey: ['matches', page],
-    queryFn: fetchMatches,
+    queryKey: ['matches'],
+    queryFn: () => matchingService.listMatches({ page: 1, limit: 20 }),
   });
 
   const handleGenerate = useCallback(

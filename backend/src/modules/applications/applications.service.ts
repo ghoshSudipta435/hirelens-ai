@@ -7,7 +7,7 @@ import { buildPaginatedResponse, parsePagination } from '../../utils/pagination'
 import type { CreateApplicationInputDto, UpdateApplicationStatusInputDto } from './applications.schemas';
 import type { ApplicationListQuery, ApplicationWithRelations } from './applications.types';
 
-type ApplicationPrismaClient = Pick<PrismaClient, 'application' | 'resume' | 'jobPosting' | '$transaction'>;
+type ApplicationPrismaClient = Pick<PrismaClient, 'application' | 'resume' | 'jobPosting'>;
 
 export class ApplicationService {
   private readonly prismaClient: ApplicationPrismaClient;
@@ -17,59 +17,57 @@ export class ApplicationService {
   }
 
   async createApplication(studentId: string, data: CreateApplicationInputDto) {
-    return this.prismaClient.$transaction(async (tx) => {
-      const resume = await tx.resume.findUnique({
-        where: { id: data.resumeId },
-      });
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: data.resumeId },
+    });
 
-      if (!resume || resume.ownerId !== studentId || resume.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found or unauthorized');
-      }
+    if (!resume || resume.ownerId !== studentId || resume.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found or unauthorized');
+    }
 
-      if (resume.status !== 'ACTIVE') {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'RESUME_NOT_ACTIVE', 'Only active resumes can be used for applications');
-      }
+    if (resume.status !== 'ACTIVE') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'RESUME_NOT_ACTIVE', 'Only active resumes can be used for applications');
+    }
 
-      const job = await tx.jobPosting.findUnique({
-        where: { id: data.jobPostingId },
-      });
+    const job = await this.prismaClient.jobPosting.findUnique({
+      where: { id: data.jobPostingId },
+    });
 
-      if (!job || job.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
-      }
+    if (!job || job.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
+    }
 
-      if (job.status !== 'ACTIVE') {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'JOB_NOT_ACTIVE', 'Cannot apply to a job that is not active');
-      }
+    if (job.status !== 'ACTIVE') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'JOB_NOT_ACTIVE', 'Cannot apply to a job that is not active');
+    }
 
-      const existing = await tx.application.findUnique({
-        where: {
-          resumeId_jobPostingId: {
-            resumeId: data.resumeId,
-            jobPostingId: data.jobPostingId,
-          },
-        },
-      });
-
-      if (existing) {
-        throw new ApiError(StatusCodes.CONFLICT, 'ALREADY_APPLIED', 'You have already applied to this job with this resume');
-      }
-
-      return tx.application.create({
-        data: {
+    const existing = await this.prismaClient.application.findUnique({
+      where: {
+        resumeId_jobPostingId: {
           resumeId: data.resumeId,
           jobPostingId: data.jobPostingId,
-          status: ApplicationStatus.SUBMITTED,
         },
-        include: {
-          resume: {
-            select: { id: true, title: true, version: true },
-          },
-          jobPosting: {
-            select: { id: true, title: true, employmentType: true, locationMode: true },
-          },
+      },
+    });
+
+    if (existing) {
+      throw new ApiError(StatusCodes.CONFLICT, 'ALREADY_APPLIED', 'You have already applied to this job with this resume');
+    }
+
+    return this.prismaClient.application.create({
+      data: {
+        resumeId: data.resumeId,
+        jobPostingId: data.jobPostingId,
+        status: ApplicationStatus.SUBMITTED,
+      },
+      include: {
+        resume: {
+          select: { id: true, title: true, version: true },
         },
-      });
+        jobPosting: {
+          select: { id: true, title: true, employmentType: true, locationMode: true },
+        },
+      },
     });
   }
 
@@ -142,34 +140,32 @@ export class ApplicationService {
   }
 
   async updateApplicationStatus(recruiterId: string, applicationId: string, data: UpdateApplicationStatusInputDto) {
-    return this.prismaClient.$transaction(async (tx) => {
-      const application = await tx.application.findUnique({
-        where: { id: applicationId, deletedAt: null },
-        include: {
-          jobPosting: { select: { recruiterId: true } },
+    const application = await this.prismaClient.application.findUnique({
+      where: { id: applicationId, deletedAt: null },
+      include: {
+        jobPosting: { select: { recruiterId: true } },
+      },
+    });
+
+    if (!application) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'APPLICATION_NOT_FOUND', 'Application not found');
+    }
+
+    if (application.jobPosting.recruiterId !== recruiterId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'You can only update applications to your own jobs');
+    }
+
+    return this.prismaClient.application.update({
+      where: { id: applicationId },
+      data: { status: data.status },
+      include: {
+        resume: {
+          select: { id: true, title: true, version: true },
         },
-      });
-
-      if (!application) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'APPLICATION_NOT_FOUND', 'Application not found');
-      }
-
-      if (application.jobPosting.recruiterId !== recruiterId) {
-        throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'You can only update applications to your own jobs');
-      }
-
-      return tx.application.update({
-        where: { id: applicationId },
-        data: { status: data.status },
-        include: {
-          resume: {
-            select: { id: true, title: true, version: true },
-          },
-          jobPosting: {
-            select: { id: true, title: true, employmentType: true, locationMode: true },
-          },
+        jobPosting: {
+          select: { id: true, title: true, employmentType: true, locationMode: true },
         },
-      });
+      },
     });
   }
 

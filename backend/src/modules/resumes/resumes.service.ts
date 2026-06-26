@@ -141,34 +141,11 @@ export class ResumeService {
         throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
       }
 
-      const newTitle = data.title ?? resume.title;
-      const newStatus = data.status ?? resume.status;
-
-      if (newStatus === ResumeStatus.ACTIVE) {
-        const activeResume = await tx.resume.findFirst({
-          where: {
-            ownerId: userId,
-            title: newTitle,
-            status: ResumeStatus.ACTIVE,
-            deletedAt: null,
-            NOT: { id: resumeId },
-          },
-        });
-
-        if (activeResume) {
-          throw new ApiError(
-            StatusCodes.CONFLICT,
-            'MULTIPLE_ACTIVE_RESUMES',
-            'You can only have one ACTIVE resume per title group'
-          );
-        }
-      }
-
       return tx.resume.update({
         where: { id: resumeId },
         data: {
-          title: newTitle,
-          status: newStatus,
+          ...(data.title !== undefined && { title: data.title }),
+          ...(data.status !== undefined && { status: data.status }),
         },
         include: {
           uploadedFile: true,
@@ -206,6 +183,53 @@ export class ResumeService {
       publicId: file.cloudinaryPublicId,
       resourceType,
     });
+  }
+
+  async reparseResume(userId: string, resumeId: string): Promise<ResumeWithFile> {
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: resumeId },
+      include: { uploadedFile: true },
+    });
+
+    if (!resume || resume.ownerId !== userId || resume.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
+    }
+
+    if (!resume.uploadedFile) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'FILE_NOT_FOUND', 'No uploaded file associated with this resume');
+    }
+
+    await this.enrichResumeWithAi(resume.id, resume.uploadedFile);
+
+    return this.prismaClient.resume.findUnique({
+      where: { id: resumeId },
+      include: { uploadedFile: true },
+    }) as unknown as ResumeWithFile;
+  }
+
+  async reparseAllResumes(): Promise<{ reprocessed: number; failed: number }> {
+    const resumes = await this.prismaClient.resume.findMany({
+      where: { deletedAt: null },
+      include: { uploadedFile: true },
+    });
+
+    let reprocessed = 0;
+    let failed = 0;
+
+    for (const resume of resumes) {
+      if (!resume.uploadedFile) {
+        failed++;
+        continue;
+      }
+      try {
+        await this.enrichResumeWithAi(resume.id, resume.uploadedFile);
+        reprocessed++;
+      } catch {
+        failed++;
+      }
+    }
+
+    return { reprocessed, failed };
   }
 
   async recordAuditEvent(eventType: ResumeAuditEventType, input: ResumeAuditInput): Promise<void> {

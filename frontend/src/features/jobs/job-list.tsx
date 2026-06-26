@@ -8,12 +8,10 @@ import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
 import * as jobService from '@/services/job.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { useDeleteJobMutation } from './use-job-mutations';
 
 export function JobList() {
   const user = useAuthStore((state) => state.user);
   const [page, setPage] = useState(1);
-  const deleteMutation = useDeleteJobMutation();
 
   const fetchJobs = useCallback(async () => {
     return jobService.listJobs({ page, limit: 20 });

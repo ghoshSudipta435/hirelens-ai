@@ -35,4 +35,21 @@ export class InterviewController {
       next(error);
     }
   };
+
+  listQuestionSets = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const result = await this.interviewService.listQuestionSets(
+        request.auth!.userId,
+        request.auth!.role,
+        request.query as { page?: number; limit?: number },
+      );
+
+      response.status(StatusCodes.OK).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

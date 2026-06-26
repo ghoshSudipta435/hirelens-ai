@@ -18,6 +18,19 @@ vi.mock('../../src/providers/storage/cloudinary.storage', () => ({
   },
 }));
 
+vi.mock('../../src/config/providers', () => ({
+  providers: {
+    getAI: vi.fn().mockResolvedValue({
+      extractSkillsFromText: vi.fn().mockResolvedValue(['skill1', 'skill2']),
+      generateMatchScore: vi.fn(),
+      generateInterviewQuestions: vi.fn(),
+    }),
+    getParser: vi.fn().mockResolvedValue({
+      parse: vi.fn().mockResolvedValue({ rawText: 'test', skills: [], experience: [], education: [], summary: '' }),
+    }),
+  },
+}));
+
 describe('applications routes', () => {
   beforeEach(() => {
     vi.resetModules();

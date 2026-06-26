@@ -45,13 +45,14 @@ function DashboardCard({
 }
 
 function StudentDashboard() {
+  const user = useAuthStore((state) => state.user);
   const fetchResumes = useCallback(async () => resumeService.listResumes(), []);
   const fetchApplications = useCallback(async () => applicationService.listApplications({ limit: 1 }), []);
   const fetchMatches = useCallback(async () => matchingService.listMatches({ limit: 1 }), []);
 
-  const { data: resumes } = useQuery({ queryKey: ['resumes'], queryFn: fetchResumes });
-  const { data: applications } = useQuery({ queryKey: ['applications-dash'], queryFn: fetchApplications });
-  const { data: matches } = useQuery({ queryKey: ['matches-dash'], queryFn: fetchMatches });
+  const { data: resumes } = useQuery({ queryKey: ['resumes'], queryFn: fetchResumes, enabled: !!user });
+  const { data: applications } = useQuery({ queryKey: ['applications', 1], queryFn: fetchApplications, enabled: !!user });
+  const { data: matches } = useQuery({ queryKey: ['matches', 1], queryFn: fetchMatches, enabled: !!user });
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -87,9 +88,10 @@ function StudentDashboard() {
 }
 
 function RecruiterDashboard() {
+  const user = useAuthStore((state) => state.user);
   const fetchJobs = useCallback(async () => jobService.listJobs({ limit: 1 }), []);
 
-  const { data: jobs } = useQuery({ queryKey: ['jobs-dash'], queryFn: fetchJobs });
+  const { data: jobs } = useQuery({ queryKey: ['jobs', 1], queryFn: fetchJobs, enabled: !!user });
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

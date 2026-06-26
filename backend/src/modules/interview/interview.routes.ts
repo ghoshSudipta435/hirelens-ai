@@ -10,6 +10,12 @@ const interviewController = new InterviewController();
 
 export const interviewRouter = Router();
 
+interviewRouter.get(
+  '/',
+  authenticateAccessToken,
+  interviewController.listQuestionSets,
+);
+
 interviewRouter.post(
   '/generate',
   authenticateAccessToken,

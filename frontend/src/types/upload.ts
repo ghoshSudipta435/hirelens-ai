@@ -1,6 +1,5 @@
 export type UploadedFile = {
   id: string;
-  ownerId: string;
   fileName: string;
   fileType: string;
   fileSize: number;

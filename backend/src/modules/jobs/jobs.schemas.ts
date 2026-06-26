@@ -4,7 +4,6 @@ import { EmploymentType, JobPostingStatus, LocationMode } from '@prisma/client';
 export const createJobSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title is too long'),
   description: z.string().min(1, 'Description is required').max(10000, 'Description is too long'),
-  extractedSkills: z.array(z.string()).default([]),
   employmentType: z.nativeEnum(EmploymentType),
   locationMode: z.nativeEnum(LocationMode),
   status: z.nativeEnum(JobPostingStatus).optional(),
@@ -13,7 +12,6 @@ export const createJobSchema = z.object({
 export const updateJobSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title is too long').optional(),
   description: z.string().min(1, 'Description is required').max(10000, 'Description is too long').optional(),
-  extractedSkills: z.array(z.string()).optional(),
   employmentType: z.nativeEnum(EmploymentType).optional(),
   locationMode: z.nativeEnum(LocationMode).optional(),
   status: z.nativeEnum(JobPostingStatus).optional(),

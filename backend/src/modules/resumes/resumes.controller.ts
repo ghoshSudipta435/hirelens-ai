@@ -130,6 +130,32 @@ export class ResumeController {
     }
   };
 
+  reparseResume = async (request: ResumeParamsRequest, response: Response, next: NextFunction) => {
+    try {
+      const result = await this.resumeService.reparseResume(request.auth!.userId, request.params.id);
+
+      response.status(StatusCodes.OK).json({
+        success: true,
+        data: this.mapResponse(result),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  reparseAllResumes = async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      const result = await this.resumeService.reparseAllResumes();
+
+      response.status(StatusCodes.OK).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   private mapResponse(result: ResumeWithFile): ResumeResponseDto {
     return {
       id: result.id,

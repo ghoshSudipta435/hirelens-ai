@@ -5,8 +5,9 @@ import { prisma } from '../../config/prisma';
 import { providers } from '../../config/providers';
 import type { InterviewQuestionInput } from '../../providers/ai/types';
 import { ApiError } from '../../utils/api-error';
+import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 
-type InterviewPrismaClient = Pick<PrismaClient, 'interviewQuestionSet' | 'interviewQuestion' | 'matchResult' | 'jobPosting' | '$transaction'>;
+type InterviewPrismaClient = Pick<PrismaClient, 'interviewQuestionSet' | 'interviewQuestion' | 'matchResult' | 'jobPosting' | 'resume' | '$transaction'>;
 
 export class InterviewService {
   private readonly prismaClient: InterviewPrismaClient;
@@ -107,5 +108,40 @@ export class InterviewService {
 
     const { matchResult: _, ...safeQuestionSet } = questionSet;
     return safeQuestionSet;
+  }
+
+  async listQuestionSets(userId: string, role: string, query: { page?: number; limit?: number }) {
+    const { page, limit, skip } = parsePagination(query);
+
+    const where: Record<string, unknown> = {};
+
+    if (role === 'STUDENT') {
+      where.matchResult = { resume: { ownerId: userId } };
+    } else if (role === 'RECRUITER') {
+      where.matchResult = { jobPosting: { recruiterId: userId } };
+    }
+
+    const [items, total] = await Promise.all([
+      this.prismaClient.interviewQuestionSet.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          questions: { select: { id: true, question: true, difficulty: true, category: true } },
+          matchResult: {
+            select: {
+              id: true,
+              score: true,
+              resume: { select: { id: true, title: true } },
+              jobPosting: { select: { id: true, title: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prismaClient.interviewQuestionSet.count({ where }),
+    ]);
+
+    return buildPaginatedResponse(items, total, page, limit);
   }
 }

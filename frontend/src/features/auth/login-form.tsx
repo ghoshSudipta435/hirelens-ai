@@ -10,14 +10,12 @@ import { SubmitButton } from '@/components/forms/submit-button';
 import { useCurrentProfileQuery } from '@/features/profile/use-profile-mutations';
 import { useLoginMutation } from '@/features/auth/use-auth-mutations';
 import { loginFormSchema, type LoginFormValues } from '@/features/auth/auth.schemas';
-import { useToastStore } from '@/stores/toast.store';
 import { isProfileComplete } from '@/utils/profile-completion';
 
 export function LoginForm() {
   const router = useRouter();
   const loginMutation = useLoginMutation();
   const profileQuery = useCurrentProfileQuery(false);
-  const pushToast = useToastStore((state) => state.pushToast);
   const {
     formState: { errors },
     handleSubmit,
@@ -35,12 +33,8 @@ export function LoginForm() {
       await loginMutation.mutateAsync(values);
       const profile = await profileQuery.refetch();
       router.replace(profile.data && isProfileComplete(profile.data) ? '/dashboard' : '/complete-profile');
-    } catch (err) {
-      pushToast({
-        title: 'Login failed',
-        description: err instanceof Error ? err.message : 'Invalid credentials',
-        variant: 'error',
-      });
+    } catch {
+      // Mutation onError already shows toast
     }
   });
 

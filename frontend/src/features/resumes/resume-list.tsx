@@ -1,10 +1,11 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import * as resumeService from '@/services/resume.service';
 import { useToastStore } from '@/stores/toast.store';
 import type { Resume } from '@/types/resume';
@@ -14,6 +15,7 @@ export function ResumeList() {
   const queryClient = useQueryClient();
   const deleteMutation = useDeleteResumeMutation();
   const pushToast = useToastStore((state) => state.pushToast);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const fetchResumes = useCallback(async () => resumeService.listResumes(), []);
 
@@ -41,10 +43,17 @@ export function ResumeList() {
 
   const handleDelete = useCallback(
     (resumeId: string) => {
-      deleteMutation.mutate(resumeId);
+      setDeleteTarget(resumeId);
     },
-    [deleteMutation],
+    [],
   );
+
+  const confirmDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget);
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, deleteMutation]);
 
   if (isLoading) {
     return <LoadingState label="Loading resumes..." />;
@@ -93,8 +102,6 @@ export function ResumeList() {
             {resume.fileUrl && (
               <a
                 href={resume.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
               >
                 View
@@ -119,6 +126,15 @@ export function ResumeList() {
           </div>
         </div>
       ))}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete resume"
+        message="Are you sure you want to delete this resume? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

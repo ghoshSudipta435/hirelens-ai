@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api/http-client', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mockResponse = (data: any) => ({ data: { success: true, data } });
   return {
     apiClient: {

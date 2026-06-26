@@ -22,7 +22,6 @@ import {
   useUpdateProfileMutation,
 } from '@/features/profile/use-profile-mutations';
 import { useAuthStore } from '@/stores/auth.store';
-import { useToastStore } from '@/stores/toast.store';
 import { isProfileComplete, isRecruiterProfile, isStudentProfile } from '@/utils/profile-completion';
 
 export function CompleteProfileForm() {
@@ -99,18 +98,12 @@ function StudentProfileForm({ profile }: StudentProfileFormProps) {
     },
   });
 
-  const pushToast = useToastStore((state) => state.pushToast);
-
   const onSubmit = handleSubmit(async (values) => {
     try {
       await mutation.mutateAsync(values);
       router.replace('/dashboard');
-    } catch (err) {
-      pushToast({
-        title: 'Failed to save profile',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'error',
-      });
+    } catch {
+      // Mutation onError already shows toast
     }
   });
 
@@ -166,8 +159,12 @@ function RecruiterProfileForm({ profile }: RecruiterProfileFormProps) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    await mutation.mutateAsync(values);
-    router.replace('/dashboard');
+    try {
+      await mutation.mutateAsync(values);
+      router.replace('/dashboard');
+    } catch {
+      // Mutation onError already shows toast
+    }
   });
 
   return (

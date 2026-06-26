@@ -39,11 +39,15 @@ export function errorHandler(
     return;
   }
 
+  console.error('[ERROR]', error.stack || error.message);
+
+  const isProduction = process.env.NODE_ENV === 'production';
+
   response.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: error.message || 'Unexpected server error',
+      message: isProduction ? 'An unexpected error occurred' : (error.message || 'Unexpected server error'),
       details: [],
     },
   });

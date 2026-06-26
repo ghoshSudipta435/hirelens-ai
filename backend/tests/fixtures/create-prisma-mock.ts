@@ -377,6 +377,9 @@ export function createPrismaMock() {
         if (include?.jobPosting) {
           match = { ...match, jobPosting: state.jobPostings.find((j: any) => j.id === match.jobPostingId) || null };
         }
+        if (include?.resume) {
+          match = { ...match, resume: state.resumes.find((r: any) => r.id === match.resumeId) || null };
+        }
         return match;
       },
       findMany: async ({ where, skip, take }: any) => {

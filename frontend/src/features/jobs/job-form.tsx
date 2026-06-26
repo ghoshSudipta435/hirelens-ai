@@ -9,12 +9,10 @@ import { SubmitButton } from '@/components/forms/submit-button';
 import { TextAreaField } from '@/components/forms/text-area-field';
 import { createJobFormSchema, type CreateJobFormValues } from '@/features/jobs/jobs.schemas';
 import { useCreateJobMutation } from '@/features/jobs/use-job-mutations';
-import { useToastStore } from '@/stores/toast.store';
 
 export function JobForm() {
   const router = useRouter();
   const createJobMutation = useCreateJobMutation();
-  const pushToast = useToastStore((state) => state.pushToast);
   const {
     formState: { errors },
     handleSubmit,
@@ -34,12 +32,8 @@ export function JobForm() {
     try {
       const result = await createJobMutation.mutateAsync(values);
       router.push(`/jobs/${result.id}`);
-    } catch (err) {
-      pushToast({
-        title: 'Failed to create job',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'error',
-      });
+    } catch {
+      // Mutation onError already shows toast
     }
   });
 

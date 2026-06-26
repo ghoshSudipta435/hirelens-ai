@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Field } from '@/components/forms/field';
@@ -10,7 +9,6 @@ import { SubmitButton } from '@/components/forms/submit-button';
 import { TextAreaField } from '@/components/forms/text-area-field';
 import { updateJobFormSchema, type UpdateJobFormValues } from '@/features/jobs/jobs.schemas';
 import { useUpdateJobMutation } from '@/features/jobs/use-job-mutations';
-import { useToastStore } from '@/stores/toast.store';
 import type { JobPosting } from '@/types/job';
 
 type JobEditFormProps = {
@@ -20,7 +18,6 @@ type JobEditFormProps = {
 export function JobEditForm({ job }: JobEditFormProps) {
   const router = useRouter();
   const updateJobMutation = useUpdateJobMutation();
-  const pushToast = useToastStore((state) => state.pushToast);
 
   const {
     formState: { errors },
@@ -40,14 +37,9 @@ export function JobEditForm({ job }: JobEditFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await updateJobMutation.mutateAsync({ id: job.id, ...values });
-      pushToast({ title: 'Job updated', variant: 'success' });
       router.push(`/jobs/${job.id}`);
-    } catch (err) {
-      pushToast({
-        title: 'Failed to update job',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'error',
-      });
+    } catch {
+      // Mutation onError already shows toast
     }
   });
 

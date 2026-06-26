@@ -10,12 +10,22 @@ export class PDFResumeParser implements ResumeParser {
     if (mimeType === 'application/pdf') {
       try {
         const { PDFParse } = await import('pdf-parse');
-        const pdf = new PDFParse(buffer);
+        const pdf = new PDFParse(new Uint8Array(buffer) as unknown as Buffer);
         await pdf.load();
-        text = await pdf.getText();
+        const result = await pdf.getText() as { text?: string };
+        text = result.text ?? '';
       } catch {
-        text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ').trim();
+        // PDF parsing failed; try to extract readable ASCII text as fallback
+        const ascii = buffer.toString('latin1');
+        const readable = ascii.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s{3,}/g, ' ').trim();
+        if (readable.length > 50) {
+          text = readable;
+        }
       }
+    } else if (mimeType === 'text/plain') {
+      text = buffer.toString('utf-8');
+    } else {
+      text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').trim();
     }
 
     const lines = text.split('\n').filter(line => line.trim().length > 0);
@@ -27,7 +37,7 @@ export class PDFResumeParser implements ResumeParser {
       summary: lines.slice(0, 5).join(' '),
     };
 
-    if (this.aiProvider && text.trim().length > 0) {
+    if (this.aiProvider && text.trim().length > 20) {
       try {
         parsed.skills = await this.aiProvider.extractSkillsFromText(text);
       } catch {

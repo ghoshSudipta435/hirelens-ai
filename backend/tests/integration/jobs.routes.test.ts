@@ -9,6 +9,16 @@ vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
 }));
 
+vi.mock('../../src/config/providers', () => ({
+  providers: {
+    getAI: vi.fn().mockResolvedValue({
+      extractSkillsFromText: vi.fn().mockResolvedValue(['skill1', 'skill2']),
+      generateMatchScore: vi.fn(),
+      generateInterviewQuestions: vi.fn(),
+    }),
+  },
+}));
+
 describe('jobs routes', () => {
   beforeEach(() => {
     vi.resetModules();
