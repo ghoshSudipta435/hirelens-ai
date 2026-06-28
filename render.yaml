@@ -12,6 +12,10 @@ services:
         value: 4000
       - key: API_PREFIX
         value: /api/v1
+      - key: OLLAMA_BASE_URL
+        value: http://localhost:11434
+      - key: OLLAMA_MODEL
+        value: qwen2.5:3b
       - key: CLIENT_ORIGIN
         sync: false
       - key: DATABASE_URL
@@ -35,6 +39,4 @@ services:
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
-        sync: false
-      - key: OPENAI_API_KEY
         sync: false
