@@ -34,12 +34,14 @@ USER appuser
 EXPOSE 3000
 CMD ["node", "server.js"]
 
-# ---- Backend Runtime (LAST — Render uses this stage) ----
+# ---- Backend Runtime (LAST) ----
 FROM node:${NODE_VERSION}-alpine AS backend
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-WORKDIR /app/backend
 
-# Copy production dependencies, generated prisma engine, and compiled dist directly from the build cache
+# Set the workdir cleanly to /app
+WORKDIR /app
+
+# Copy everything into /app so paths resolve predictably
 COPY --from=backend-build /app/backend/node_modules ./node_modules
 COPY --from=backend-build /app/backend/package.json ./package.json
 COPY --from=backend-build /app/backend/prisma ./prisma
@@ -52,4 +54,5 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
 
+# Execute right from the root app folder
 CMD ["node", "dist/server.js"]
