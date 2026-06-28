@@ -19,7 +19,21 @@ ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 RUN npm run build
 
-# ---- Backend Runtime ----
+# ---- Frontend Runtime ----
+FROM node:${NODE_VERSION}-alpine AS frontend
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --from=frontend-build /app/frontend/.next/standalone ./
+COPY --from=frontend-build /app/frontend/.next/static ./.next/static
+COPY --from=frontend-build /app/frontend/public ./public
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+USER appuser
+EXPOSE 3000
+CMD ["node", "server.js"]
+
+# ---- Backend Runtime (LAST — Render uses this stage) ----
 FROM node:${NODE_VERSION}-alpine AS backend
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
@@ -34,17 +48,3 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
 CMD ["node", "dist/server.js"]
-
-# ---- Frontend Runtime ----
-FROM node:${NODE_VERSION}-alpine AS frontend
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-WORKDIR /app
-COPY --from=frontend-build /app/frontend/.next/standalone ./
-COPY --from=frontend-build /app/frontend/.next/static ./.next/static
-COPY --from=frontend-build /app/frontend/public ./public
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-USER appuser
-EXPOSE 3000
-CMD ["node", "server.js"]
