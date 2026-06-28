@@ -38,10 +38,10 @@ CMD ["node", "server.js"]
 FROM node:${NODE_VERSION}-alpine AS backend
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Set the workdir cleanly to /app
-WORKDIR /app
+# CRITICAL FIX: Match the exact working directory structure from the build stage (/app/backend)
+WORKDIR /app/backend
 
-# Copy everything into /app so paths resolve predictably
+# Copy files directly into their exact mirrored folder structure
 COPY --from=backend-build /app/backend/node_modules ./node_modules
 COPY --from=backend-build /app/backend/package.json ./package.json
 COPY --from=backend-build /app/backend/prisma ./prisma
@@ -54,5 +54,5 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
 
-# Execute right from the root app folder
+# Runs from inside /app/backend, perfectly resolving 'dist/server.js'
 CMD ["node", "dist/server.js"]
