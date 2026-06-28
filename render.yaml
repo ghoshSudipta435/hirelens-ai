@@ -5,7 +5,7 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
-    docker_target: backend
+    dockerTarget: backend
     envVars:
       - key: NODE_ENV
         value: production
