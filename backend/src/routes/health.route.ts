@@ -2,15 +2,32 @@ import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
+import { prisma } from '../config/prisma';
+
 export const healthRouter = Router();
 
-export function sendHealthResponse(_request: Request, response: Response) {
-  response.status(StatusCodes.OK).json({
-    success: true,
-    data: {
-      status: 'ok',
-    },
-  });
+export async function sendHealthResponse(_request: Request, response: Response) {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    response.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        status: 'ok',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    response.status(StatusCodes.SERVICE_UNAVAILABLE).json({
+      success: false,
+      error: {
+        code: 'HEALTH_CHECK_FAILED',
+        message: 'Service unhealthy',
+        details: [],
+      },
+    });
+  }
 }
 
 healthRouter.get('/health', sendHealthResponse);

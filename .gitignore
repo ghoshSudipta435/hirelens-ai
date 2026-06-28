@@ -8,13 +8,9 @@ coverage/
 
 # env
 .env
-.env.development
-.env.test
-.env.production
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.local.example
 
 # prisma
 backend/prisma/dev.db
@@ -35,3 +31,6 @@ pnpm-debug.log*
 # misc
 tmp/
 *.tsbuildinfo
+
+# docker
+docker-compose.override.yml

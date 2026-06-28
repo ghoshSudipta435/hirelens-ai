@@ -3,10 +3,10 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: hirelens
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hirelens_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: hirelens
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -14,6 +14,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build:
@@ -22,12 +23,12 @@ services:
     ports:
       - '4000:4000'
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: '4000'
       API_PREFIX: /api/v1
-      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://hirelens:hirelens_dev@postgres:5432/hirelens?sslmode=disable}
-      DIRECT_URL: ${DIRECT_URL:-postgresql://hirelens:hirelens_dev@postgres:5432/hirelens?sslmode=disable}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -37,19 +38,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build:
       context: .
       target: frontend
       args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000/api/v1}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     ports:
       - '3000:3000'
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000/api/v1}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   pgdata:

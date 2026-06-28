@@ -2,11 +2,12 @@ import type { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError } from 'zod';
 
+import { logger } from '../config/logger';
 import { ApiError } from '../utils/api-error';
 
 export function errorHandler(
   error: Error,
-  _request: Request,
+  request: Request,
   response: Response,
   _next: NextFunction,
 ) {
@@ -39,15 +40,23 @@ export function errorHandler(
     return;
   }
 
-  console.error('[ERROR]', error.stack || error.message);
-
-  const isProduction = process.env.NODE_ENV === 'production';
+  logger.error(
+    {
+      err: error,
+      request: {
+        method: request.method,
+        url: request.originalUrl,
+        userId: (request as { auth?: { userId?: string } }).auth?.userId,
+      },
+    },
+    'Unhandled error',
+  );
 
   response.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: isProduction ? 'An unexpected error occurred' : (error.message || 'Unexpected server error'),
+      message: 'An unexpected error occurred',
       details: [],
     },
   });
