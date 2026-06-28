@@ -3,8 +3,8 @@ ARG NODE_VERSION=20
 # ---- Backend Build ----
 FROM node:${NODE_VERSION}-alpine AS backend-build
 WORKDIR /app/backend
-COPY backend/package.json backend/package-lock.json ./
-RUN npm ci
+COPY backend/package.json ./
+COPY package-lock.json ./RUN npm ci
 COPY backend/prisma ./prisma
 COPY backend/ .
 RUN npx prisma generate && npm run build
