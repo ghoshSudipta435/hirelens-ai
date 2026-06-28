@@ -1,16 +1,16 @@
 services:
   - type: web
     name: hirelens-ai-backend
-    runtime: node
+    runtime: docker
     plan: free
-    rootDir: .
-    buildCommand: npm install --include=dev && npm run db:generate && npm run build --workspace backend
-    startCommand: npm run start --workspace backend
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    dockerTarget: backend
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 4000
       - key: API_PREFIX
         value: /api/v1
       - key: CLIENT_ORIGIN
