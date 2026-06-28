@@ -4,7 +4,6 @@ ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package.json ./
-# FIXED: Split the smashed line into two separate, distinct commands
 COPY package-lock.json ./
 RUN npm ci
 COPY backend/prisma ./prisma
@@ -39,12 +38,15 @@ CMD ["node", "server.js"]
 FROM node:${NODE_VERSION}-alpine AS backend
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
+
+# FIXED: Copying both package files straight from the successful backend-build stage
 COPY --from=backend-build /app/backend/package.json ./
-# FIXED: Ensures it safely references the installed files from the build stage
-COPY package-lock.json ./
+COPY --from=backend-build /app/backend/package-lock.json ./
 COPY --from=backend-build /app/backend/prisma ./prisma
+
 RUN npm ci --omit=dev && npx prisma generate
 COPY --from=backend-build /app/backend/dist ./dist
+
 ENV NODE_ENV=production
 USER appuser
 EXPOSE 4000
