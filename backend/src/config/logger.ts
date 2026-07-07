@@ -1,9 +1,29 @@
 import { randomUUID } from 'node:crypto';
-
 import pino from 'pino';
 import pinoHttp from 'pino-http';
-
 import { env } from './env';
+
+// Completely safe runtime verification function that works across both ESM and CommonJS modes
+function getTransport() {
+  if (env.NODE_ENV !== 'development') {
+    return undefined;
+  }
+
+  try {
+    // If running under standard compiled Node paths, verify its accessibility synchronously 
+    const isAvailable = require.resolve('pino-pretty');
+    if (isAvailable) {
+      return {
+        target: 'pino-pretty',
+        options: { colorize: true },
+      };
+    }
+  } catch (e) {
+    // pino-pretty isn't available in production layers (Expected)
+  }
+
+  return undefined;
+}
 
 export const logger = pino({
   level: env.LOG_LEVEL,
@@ -20,15 +40,7 @@ export const logger = pino({
     ],
     remove: true,
   },
-  transport:
-    env.NODE_ENV === 'development'
-      ? {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-          },
-        }
-      : undefined,
+  transport: getTransport(),
 });
 
 export const requestLogger = pinoHttp({
