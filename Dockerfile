@@ -8,6 +8,11 @@ COPY tsconfig.base.json ./
 COPY backend/ ./backend/
 RUN npm ci
 
+# 👇 RESTORE THESE THREE CRITICAL LINES
+RUN npx prisma generate --schema=backend/prisma/schema.prisma
+RUN npm run build --workspace=backend
+RUN npm prune --omit=dev
+
 # ---- Frontend Build ----
 FROM node:${NODE_VERSION}-alpine AS frontend-build
 WORKDIR /app
