@@ -4,12 +4,9 @@ ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-alpine AS backend-build
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY tsconfig.base.json ./             # 👈 ADD THIS LINE HERE
+COPY tsconfig.base.json ./
 COPY backend/ ./backend/
 RUN npm ci
-RUN npx prisma generate --schema=backend/prisma/schema.prisma
-RUN npm run build --workspace=backend
-RUN npm prune --omit=dev
 
 # ---- Frontend Build ----
 FROM node:${NODE_VERSION}-alpine AS frontend-build
