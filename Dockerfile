@@ -12,11 +12,16 @@ RUN npm prune --omit=dev
 
 # ---- Frontend Build ----
 FROM node:${NODE_VERSION}-alpine AS frontend-build
+
 WORKDIR /app
-COPY package.json package-lock.json ./
-COPY frontend/ ./frontend/
+
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY frontend ./frontend
+
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
 RUN npm ci
 RUN npm run build --workspace=frontend
 
