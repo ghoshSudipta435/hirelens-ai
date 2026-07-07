@@ -4,6 +4,7 @@ ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-alpine AS backend-build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY tsconfig.base.json ./             # 👈 ADD THIS LINE HERE
 COPY backend/ ./backend/
 RUN npm ci
 RUN npx prisma generate --schema=backend/prisma/schema.prisma
@@ -37,7 +38,7 @@ USER appuser
 EXPOSE 3000
 CMD ["node", "server.js"]
 
-# ---- Backend Runtime (MOVED TO THE BOTTOM) ----
+# ---- Backend Runtime ----
 FROM node:${NODE_VERSION}-alpine AS backend
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
