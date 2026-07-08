@@ -139,19 +139,11 @@ type RefreshTokenDelegate = {
   }): Promise<{ count: number }>;
 };
 
-type AuthTransactionClient = {
-  user: Pick<UserDelegate, 'create'>;
-  studentProfile: Pick<StudentProfileDelegate, 'create'>;
-  recruiterProfile: Pick<RecruiterProfileDelegate, 'create'>;
-  refreshToken: Pick<RefreshTokenDelegate, 'create' | 'update' | 'updateMany'>;
-};
-
 type AuthPrismaClient = {
   user: UserDelegate;
   studentProfile: StudentProfileDelegate;
   recruiterProfile: RecruiterProfileDelegate;
   refreshToken: RefreshTokenDelegate;
-  $transaction<T>(fn: (tx: AuthTransactionClient) => Promise<T>): Promise<T>;
 };
 
 type AuthServiceDependencies = {
@@ -194,33 +186,31 @@ export class AuthService {
 
     const passwordHash = await this.passwordService.hashPassword(input.password);
 
-    return this.prismaClient.$transaction(async (tx) => {
-      const user = await tx.user.create({
+    const user = await this.prismaClient.user.create({
+      data: {
+        name: input.name,
+        email: input.email,
+        passwordHash,
+        role: input.role,
+      },
+    });
+
+    if (input.role === 'STUDENT') {
+      await this.prismaClient.studentProfile.create({
         data: {
-          name: input.name,
-          email: input.email,
-          passwordHash,
-          role: input.role,
+          userId: user.id,
+          fullName: input.name,
         },
       });
+    } else {
+      await this.prismaClient.recruiterProfile.create({
+        data: {
+          userId: user.id,
+        },
+      });
+    }
 
-      if (input.role === 'STUDENT') {
-        await tx.studentProfile.create({
-          data: {
-            userId: user.id,
-            fullName: input.name,
-          },
-        });
-      } else {
-        await tx.recruiterProfile.create({
-          data: {
-            userId: user.id,
-          },
-        });
-      }
-
-      return this.issueTokensForUser(user, tx);
-    });
+    return this.issueTokensForUser(user);
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
@@ -271,25 +261,23 @@ export class AuthService {
       throw this.invalidRefreshTokenError();
     }
 
-    return this.prismaClient.$transaction(async (tx) => {
-      const rotationResult = await tx.refreshToken.updateMany({
-        where: {
-          id: existingToken.id,
-          userId: existingToken.userId,
-          tokenHash,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-        },
-      });
-
-      if (rotationResult.count !== 1) {
-        throw this.invalidRefreshTokenError();
-      }
-
-      return this.issueTokensForUser(existingToken.user, tx);
+    const rotationResult = await this.prismaClient.refreshToken.updateMany({
+      where: {
+        id: existingToken.id,
+        userId: existingToken.userId,
+        tokenHash,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
     });
+
+    if (rotationResult.count !== 1) {
+      throw this.invalidRefreshTokenError();
+    }
+
+    return this.issueTokensForUser(existingToken.user);
   }
 
   async logout(refreshToken: string): Promise<void> {
