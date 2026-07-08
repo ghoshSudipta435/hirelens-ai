@@ -14,12 +14,16 @@ export function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-export function setCsrfCookie(response: Response): string {
+export function setCsrfCookie(request: Request, response: Response): string {
   const token = generateCsrfToken();
+  const origin = request.headers.origin;
+  const serverOrigin = `${request.protocol}://${request.get('host')}`;
+  const isCrossOrigin = !!origin && origin !== serverOrigin;
+
   response.cookie(CSRF_COOKIE_NAME, token, {
     httpOnly: false,
-    secure: env.NODE_ENV === 'production',
-    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: isCrossOrigin || request.secure,
+    sameSite: isCrossOrigin ? 'none' : 'lax',
     path: '/',
   });
   return token;
@@ -52,7 +56,7 @@ export function csrfProtection(request: Request, response: Response, next: NextF
   next();
 }
 
-export function csrfTokenEndpoint(_request: Request, response: Response) {
-  const token = setCsrfCookie(response);
+export function csrfTokenEndpoint(request: Request, response: Response) {
+  const token = setCsrfCookie(request, response);
   response.json({ success: true, data: { csrfToken: token } });
 }

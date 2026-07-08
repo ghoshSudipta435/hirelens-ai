@@ -10,7 +10,7 @@ import { buildPaginatedResponse, parsePagination } from '../../utils/pagination'
 import type { CreateResumeInputDto, UpdateResumeInputDto } from './resumes.schemas';
 import type { ResumeAuditInput, ResumeListQuery, ResumeWithFile } from './resumes.types';
 
-type ResumePrismaClient = Pick<PrismaClient, 'resume' | 'uploadedFile' | 'resumeAuditEvent' | '$transaction'>;
+type ResumePrismaClient = Pick<PrismaClient, 'resume' | 'uploadedFile' | 'resumeAuditEvent'>;
 
 export class ResumeService {
   private readonly prismaClient: ResumePrismaClient;
@@ -132,47 +132,43 @@ export class ResumeService {
   }
 
   async updateResume(userId: string, resumeId: string, data: UpdateResumeInputDto): Promise<ResumeWithFile> {
-    return this.prismaClient.$transaction(async (tx) => {
-      const resume = await tx.resume.findUnique({
-        where: { id: resumeId },
-      });
-
-      if (!resume || resume.ownerId !== userId || resume.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
-      }
-
-      return tx.resume.update({
-        where: { id: resumeId },
-        data: {
-          ...(data.title !== undefined && { title: data.title }),
-          ...(data.status !== undefined && { status: data.status }),
-        },
-        include: {
-          uploadedFile: true,
-        },
-      });
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: resumeId },
     });
+
+    if (!resume || resume.ownerId !== userId || resume.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
+    }
+
+    return this.prismaClient.resume.update({
+      where: { id: resumeId },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.status !== undefined && { status: data.status }),
+      },
+      include: {
+        uploadedFile: true,
+      },
+    }) as unknown as ResumeWithFile;
   }
 
   async deleteResume(userId: string, resumeId: string): Promise<{ resumeId: string }> {
-    return this.prismaClient.$transaction(async (tx) => {
-      const resume = await tx.resume.findUnique({
-        where: { id: resumeId },
-      });
-
-      if (!resume || resume.ownerId !== userId || resume.deletedAt) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
-      }
-
-      await tx.resume.update({
-        where: { id: resumeId },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
-
-      return { resumeId };
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: resumeId },
     });
+
+    if (!resume || resume.ownerId !== userId || resume.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
+    }
+
+    await this.prismaClient.resume.update({
+      where: { id: resumeId },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return { resumeId };
   }
 
   public createSignedUrl(file: UploadedFile): string {

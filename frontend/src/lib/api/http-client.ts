@@ -28,22 +28,18 @@ export const aiApiClient = axios.create({
 });
 
 let csrfTokenPromise: Promise<string | null> | null = null;
+let cachedCsrfToken: string | null = null;
 
 async function ensureCsrfToken(): Promise<string | null> {
   if (typeof document === 'undefined') return null;
-  const cookie = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('hirelens_csrf_token='));
-  if (cookie) return cookie.split('=')[1] ?? null;
+  if (cachedCsrfToken) return cachedCsrfToken;
 
   if (!csrfTokenPromise) {
     csrfTokenPromise = apiClient
       .get<{ success: boolean; data: { csrfToken: string } }>('/csrf-token')
-      .then(() => {
-        const csrfCookie = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('hirelens_csrf_token='));
-        return csrfCookie?.split('=')[1] ?? null;
+      .then((response) => {
+        cachedCsrfToken = response.data.data.csrfToken;
+        return cachedCsrfToken;
       })
       .finally(() => {
         csrfTokenPromise = null;
