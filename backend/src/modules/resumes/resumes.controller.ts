@@ -150,8 +150,10 @@ export class ResumeController {
         request.params.id,
       );
 
+      const isDownload = request.query.download === 'true';
+
       response.setHeader('Content-Type', contentType);
-      response.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+      response.setHeader('Content-Disposition', `${isDownload ? 'attachment' : 'inline'}; filename="${fileName}"`);
       response.setHeader('Content-Length', buffer.length);
       response.end(buffer);
     } catch (error) {

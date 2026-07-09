@@ -5,7 +5,10 @@ import { AppProviders } from '@/providers/app-providers';
 
 import './globals.css';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api/v1', '') ?? '';
+// 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "") ||
+  "https://hirelens-ai.onrender.com";
 
 export const metadata: Metadata = {
   title: {

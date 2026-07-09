@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -8,10 +9,12 @@ import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageShell } from '@/components/layout/page-shell';
+import { useCurrentProfileQuery } from '@/features/profile/use-profile-mutations';
 import * as matchingService from '@/services/matching.service';
 
 export default function MatchesPage() {
   const [page, setPage] = useState(1);
+  const { data: profile } = useCurrentProfileQuery();
 
   const fetchMatches = useCallback(async () => {
     return matchingService.listMatches({ page, limit: 20 });
@@ -51,9 +54,33 @@ export default function MatchesPage() {
           description="See how your resume matches job requirements"
         >
           {!data || data.items.length === 0 ? (
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
-              No match results yet. Preview a match from a job posting to see results here.
-            </div>
+            profile?.user.role === 'RECRUITER' ? (
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-12 text-center">
+                <p className="text-sm text-[var(--muted)]">No matches yet</p>
+                <p className="mt-1 text-sm text-[var(--foreground)]">
+                  Create a job posting to start matching with qualified candidates.
+                </p>
+                <Link
+                  href="/jobs/new"
+                  className="mt-4 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                >
+                  Create job posting
+                </Link>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-12 text-center">
+                <p className="text-sm text-[var(--muted)]">No matches yet</p>
+                <p className="mt-1 text-sm text-[var(--foreground)]">
+                  Upload your resume to discover matching job opportunities.
+                </p>
+                <Link
+                  href="/resumes"
+                  className="mt-4 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                >
+                  Upload resume
+                </Link>
+              </div>
+            )
           ) : (
             <div className="space-y-3">
               {data.items.map((match) => (

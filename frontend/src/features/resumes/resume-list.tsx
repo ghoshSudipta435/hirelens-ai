@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { appEnv } from '@/config/env';
 import * as resumeService from '@/services/resume.service';
 import { useToastStore } from '@/stores/toast.store';
 import type { Resume } from '@/types/resume';
@@ -91,7 +92,7 @@ export function ResumeList() {
                 </span>
               )}
               {resume.status === 'DRAFT' && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-800/60 dark:text-amber-200">
                   Draft
                 </span>
               )}
@@ -108,6 +109,12 @@ export function ResumeList() {
             >
               View
             </button>
+            <a
+              href={`${appEnv.apiBaseUrl}/resumes/${resume.id}/file?download=true`}
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
+            >
+              Download
+            </a>
             {resume.status !== 'ACTIVE' && (
               <button
                 type="button"
