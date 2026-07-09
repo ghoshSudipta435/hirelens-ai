@@ -143,6 +143,22 @@ export class ResumeController {
     }
   };
 
+  getResumeFile = async (request: ResumeParamsRequest, response: Response, next: NextFunction) => {
+    try {
+      const { buffer, contentType, fileName } = await this.resumeService.downloadResumeFile(
+        request.auth!.userId,
+        request.params.id,
+      );
+
+      response.setHeader('Content-Type', contentType);
+      response.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+      response.setHeader('Content-Length', buffer.length);
+      response.end(buffer);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   reparseAllResumes = async (_request: Request, response: Response, next: NextFunction) => {
     try {
       const result = await this.resumeService.reparseAllResumes();

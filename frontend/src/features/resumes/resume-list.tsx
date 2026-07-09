@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { appEnv } from '@/config/env';
 import * as resumeService from '@/services/resume.service';
 import { useToastStore } from '@/stores/toast.store';
 import type { Resume } from '@/types/resume';
@@ -101,7 +102,9 @@ export function ResumeList() {
           <div className="flex items-center gap-2">
             {resume.fileUrl && (
               <a
-                href={resume.fileUrl}
+                href={`${appEnv.apiBaseUrl}/resumes/${resume.id}/file`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
               >
                 View

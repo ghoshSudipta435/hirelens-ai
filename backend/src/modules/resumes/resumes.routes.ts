@@ -30,6 +30,13 @@ resumesRouter.get(
   resumeController.getResume,
 );
 
+resumesRouter.get(
+  '/:id/file',
+  authenticateAccessToken,
+  validateRequest({ params: resumeParamsSchema }),
+  resumeController.getResumeFile,
+);
+
 resumesRouter.patch(
   '/:id',
   authenticateAccessToken,

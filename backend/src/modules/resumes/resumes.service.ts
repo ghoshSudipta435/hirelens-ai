@@ -171,6 +171,29 @@ export class ResumeService {
     return { resumeId };
   }
 
+  async downloadResumeFile(userId: string, resumeId: string): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: resumeId },
+      include: { uploadedFile: true },
+    });
+
+    if (!resume || resume.ownerId !== userId || resume.deletedAt) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
+    }
+
+    if (!resume.uploadedFile) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'FILE_NOT_FOUND', 'No file associated with this resume');
+    }
+
+    const buffer = await this.storage.downloadFile({ url: resume.uploadedFile.fileUrl });
+
+    return {
+      buffer,
+      contentType: resume.uploadedFile.fileType,
+      fileName: resume.uploadedFile.fileName,
+    };
+  }
+
   public createSignedUrl(file: UploadedFile): string {
     const extension = file.fileName.split('.').pop()?.toLowerCase();
     const resourceType = extension === 'pdf' || extension === 'docx' ? 'raw' : 'image';
