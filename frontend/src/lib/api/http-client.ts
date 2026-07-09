@@ -48,6 +48,11 @@ async function ensureCsrfToken(): Promise<string | null> {
   return csrfTokenPromise;
 }
 
+// Eagerly pre-fetch CSRF token so it's ready before the first mutation
+if (typeof document !== 'undefined') {
+  ensureCsrfToken();
+}
+
 // Shared refresh promise prevents concurrent refresh calls from racing.
 // If multiple 401s fire simultaneously, they all await the same refresh.
 let refreshPromise: Promise<AuthSession> | null = null;

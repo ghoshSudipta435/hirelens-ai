@@ -16,7 +16,7 @@ import * as resumeService from '@/services/resume.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useToastStore } from '@/stores/toast.store';
 import { useCreateApplicationMutation } from '@/features/applications/use-application-mutations';
-import { useDeleteJobMutation } from '@/features/jobs/use-job-mutations';
+import { useDeleteJobMutation, useUpdateJobMutation } from '@/features/jobs/use-job-mutations';
 import { usePreviewMatchMutation } from '@/features/matching/use-matching-mutations';
 
 export default function JobDetailPage() {
@@ -24,6 +24,7 @@ export default function JobDetailPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const deleteMutation = useDeleteJobMutation();
+  const updateMutation = useUpdateJobMutation();
   const createApplication = useCreateApplicationMutation();
   const previewMatch = usePreviewMatchMutation();
   const pushToast = useToastStore((state) => state.pushToast);
@@ -186,6 +187,22 @@ export default function JobDetailPage() {
 
             {isOwner && (
               <div className="flex gap-3">
+                {job.status === 'DRAFT' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateMutation.mutateAsync({ id: job.id, status: 'ACTIVE' });
+                        pushToast({ title: 'Job published', variant: 'success' });
+                      } catch {
+                        // onError shows toast
+                      }
+                    }}
+                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                  >
+                    Publish
+                  </button>
+                )}
                 <Link
                   href={`/jobs/${params.id}/edit`}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"

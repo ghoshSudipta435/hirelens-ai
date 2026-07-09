@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import { appEnv } from '@/config/env';
 import * as resumeService from '@/services/resume.service';
 
 type ResumeViewerModalProps = {
@@ -44,7 +43,6 @@ export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps)
 
   if (!open) return null;
 
-  const fileUrl = resume ? `${appEnv.apiBaseUrl}/resumes/${resume.id}/file` : '';
   const isPdf = resume?.fileUrl?.endsWith('.pdf') ?? true;
 
   return (
@@ -73,18 +71,18 @@ export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps)
           </button>
         </div>
         <div className="flex-1">
-          {isPdf ? (
+          {isPdf && resume ? (
             <iframe
-              src={fileUrl}
+              src={resume.fileUrl}
               className="h-full w-full"
-              title={resume?.title ?? 'Resume'}
+              title={resume.title}
             />
           ) : (
             <div className="flex h-full items-center justify-center p-8 text-center">
               <div>
                 <p className="text-[var(--muted)]">Preview not available for this file type.</p>
                 <a
-                  href={fileUrl}
+                  href={resume?.fileUrl ?? '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
