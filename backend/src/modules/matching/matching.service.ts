@@ -13,6 +13,28 @@ type MatchPrismaClient = Pick<PrismaClient, 'matchResult' | 'resume' | 'jobPosti
 
 const SCORE_VERSION = '1.0.0';
 
+function computeFallbackMatch(
+  resumeText: string,
+  jobDescription: string,
+  jobSkills: string[],
+): { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] } {
+  const resumeLower = resumeText.toLowerCase();
+  const resumeWords = resumeLower.split(/\W+/).filter(Boolean);
+  const jobWords = jobDescription.toLowerCase().split(/\W+/).filter(Boolean);
+
+  const resumeWordSet = new Set(resumeWords);
+  const matchedWords = jobWords.filter((w) => resumeWordSet.has(w));
+
+  const score = jobWords.length > 0 ? Math.round((matchedWords.length / jobWords.length) * 100) : 0;
+
+  const matchedSkills = jobSkills.filter((s) => resumeLower.includes(s.toLowerCase()));
+  const missingSkills = jobSkills.filter((s) => !resumeLower.includes(s.toLowerCase()));
+
+  const strengths = matchedSkills.length > 0 ? [`Matched ${matchedSkills.length} skill${matchedSkills.length > 1 ? 's' : ''}`] : [];
+
+  return { score: Math.min(score, 100), matchedSkills, missingSkills, strengths };
+}
+
 export class MatchingService {
   private readonly prismaClient: MatchPrismaClient;
 
@@ -23,6 +45,7 @@ export class MatchingService {
   async previewMatch(userId: string, data: PreviewMatchInputDto) {
     const resume = await this.prismaClient.resume.findUnique({
       where: { id: data.resumeId, deletedAt: null },
+      include: { uploadedFile: true },
     });
 
     if (!resume || resume.ownerId !== userId) {
@@ -41,10 +64,23 @@ export class MatchingService {
 
     const parsedData = (resume as { parsedData?: { rawText?: string; skills?: string[] } | null }).parsedData ?? null;
 
+    let resumeText = parsedData?.rawText ?? '';
+    let resumeSkills = parsedData?.skills ?? [];
+
+    if (!resumeText && resume.uploadedFile) {
+      try {
+        const storage = await providers.getStorage();
+        const buffer = await storage.downloadFile({ url: resume.uploadedFile.fileUrl });
+        resumeText = buffer.toString('utf-8');
+      } catch {
+        resumeText = resume.title;
+      }
+    }
+
     const matchInput: MatchInput = {
-      resumeSkills: parsedData?.skills ?? [],
+      resumeSkills,
       jobSkills: job.extractedSkills,
-      resumeText: parsedData?.rawText ?? '',
+      resumeText,
       jobDescription: job.description,
     };
 
@@ -53,12 +89,7 @@ export class MatchingService {
     try {
       matchOutput = await ai.generateMatchScore(matchInput);
     } catch {
-      matchOutput = {
-        score: 0,
-        matchedSkills: [],
-        missingSkills: job.extractedSkills,
-        strengths: [],
-      };
+      matchOutput = computeFallbackMatch(resumeText, job.description, job.extractedSkills);
     }
 
     const matchResult = await this.prismaClient.matchResult.create({
