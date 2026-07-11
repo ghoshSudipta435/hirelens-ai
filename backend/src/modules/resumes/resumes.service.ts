@@ -140,6 +140,18 @@ export class ResumeService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
     }
 
+    if (data.status === 'ACTIVE') {
+      await this.prismaClient.resume.updateMany({
+        where: {
+          ownerId: userId,
+          status: 'ACTIVE',
+          id: { not: resumeId },
+          deletedAt: null,
+        },
+        data: { status: 'DRAFT' },
+      });
+    }
+
     return this.prismaClient.resume.update({
       where: { id: resumeId },
       data: {

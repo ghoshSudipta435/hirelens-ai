@@ -8,6 +8,7 @@ type AuthStatus = 'anonymous' | 'authenticated' | 'bootstrapping';
 
 type AuthState = {
   accessToken: string | null;
+  refreshToken: string | null;
   user: AuthUser | null;
   status: AuthStatus;
   setSession: (session: AuthSession) => void;
@@ -17,11 +18,13 @@ type AuthState = {
 
 export const useAuthStore = create<AuthState>()((set) => ({
   accessToken: null,
+  refreshToken: null,
   user: null,
   status: 'bootstrapping',
   setSession: (session) =>
     set({
       accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       user: session.user,
       status: 'authenticated',
     }),
@@ -33,6 +36,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   clearSession: () =>
     set({
       accessToken: null,
+      refreshToken: null,
       user: null,
       status: 'anonymous',
     }),

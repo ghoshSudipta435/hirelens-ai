@@ -224,7 +224,22 @@ export function createPrismaMock() {
         const updated = { ...state.resumes[idx], ...data, updatedAt: new Date() };
         state.resumes[idx] = updated;
         return updated;
-      }
+      },
+      updateMany: async ({ where, data }: any) => {
+        let count = 0;
+        state.resumes = state.resumes.map((r: any) => {
+          const matches =
+            (where.ownerId === undefined || r.ownerId === where.ownerId) &&
+            (where.status === undefined || r.status === where.status) &&
+            (where.id === undefined || r.id === where.id) &&
+            (where.NOT === undefined || r.id !== where.NOT.id) &&
+            (where.deletedAt === undefined || r.deletedAt === where.deletedAt);
+          if (!matches) return r;
+          count += 1;
+          return { ...r, ...data, updatedAt: new Date() };
+        });
+        return { count };
+      },
     },
     resumeAuditEvent: {
       create: async ({ data }: any) => {

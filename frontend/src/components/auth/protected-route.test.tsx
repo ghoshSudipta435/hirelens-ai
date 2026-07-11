@@ -19,6 +19,8 @@ function setAuthState(status: 'anonymous' | 'authenticated') {
   if (status === 'authenticated') {
     useAuthStore.getState().setSession({
       accessToken: 'token',
+      refreshToken: 'refresh-token',
+      refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       user: {
         id: 'user-1',
         name: 'Test User',
