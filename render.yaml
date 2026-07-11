@@ -12,10 +12,10 @@ services:
         value: 4000
       - key: API_PREFIX
         value: /api/v1
-      - key: OLLAMA_BASE_URL
-        value: http://localhost:11434
-      - key: OLLAMA_MODEL
-        value: qwen2.5:3b
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: CLIENT_ORIGIN
         sync: false
       - key: DATABASE_URL

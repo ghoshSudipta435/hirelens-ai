@@ -24,6 +24,8 @@ const envSchema = z
     CLOUDINARY_CLOUD_NAME: z.string().optional(),
     CLOUDINARY_API_KEY: z.string().optional(),
     CLOUDINARY_API_SECRET: z.string().optional(),
+    GEMINI_API_KEY: z.string().optional(),
+    GEMINI_MODEL: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
     OLLAMA_BASE_URL: z.string().url().optional(),
     OLLAMA_MODEL: z.string().optional(),
