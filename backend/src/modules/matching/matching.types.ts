@@ -10,6 +10,7 @@ export type MatchResultResponseDto = {
   matchedSkills: string[];
   missingSkills: string[];
   strengths: string[];
+  improvements: string[];
   scoreVersion: string;
   createdAt: Date;
   resume?: {

@@ -8,6 +8,7 @@ export type MatchResult = {
   matchedSkills: string[];
   missingSkills: string[];
   strengths: string[];
+  improvements: string[];
   scoreVersion: string;
   createdAt: string;
   resume?: {

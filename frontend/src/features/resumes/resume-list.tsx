@@ -6,7 +6,6 @@ import { useCallback, useState } from 'react';
 import { ErrorState } from '@/components/feedback/error-state';
 import { LoadingState } from '@/components/feedback/loading-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { appEnv } from '@/config/env';
 import * as resumeService from '@/services/resume.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useToastStore } from '@/stores/toast.store';
@@ -19,7 +18,6 @@ export function ResumeList() {
   const deleteMutation = useDeleteResumeMutation();
   const pushToast = useToastStore((state) => state.pushToast);
   const user = useAuthStore((state) => state.user);
-  const accessToken = useAuthStore((state) => state.accessToken);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [viewTarget, setViewTarget] = useState<string | null>(null);
 
@@ -115,7 +113,7 @@ export function ResumeList() {
               </button>
             )}
             <a
-              href={`${appEnv.apiBaseUrl}/resumes/${resume.id}/file?download=true&token=${accessToken}`}
+              href={resume.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"

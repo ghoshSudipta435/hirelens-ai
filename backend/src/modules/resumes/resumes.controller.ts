@@ -145,17 +145,19 @@ export class ResumeController {
 
   getResumeFile = async (request: ResumeParamsRequest, response: Response, next: NextFunction) => {
     try {
-      const { buffer, contentType, fileName } = await this.resumeService.downloadResumeFile(
+      const result = await this.resumeService.downloadResumeFile(
         request.auth!.userId,
         request.params.id,
       );
 
       const isDownload = request.query.download === 'true';
+      const disposition = isDownload ? 'attachment' : 'inline';
+      const safeName = result.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-      response.setHeader('Content-Type', contentType);
-      response.setHeader('Content-Disposition', `${isDownload ? 'attachment' : 'inline'}; filename="${fileName}"`);
-      response.setHeader('Content-Length', buffer.length);
-      response.end(buffer);
+      response.setHeader('Content-Type', result.contentType);
+      response.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+      response.setHeader('Content-Length', result.buffer.length);
+      response.end(result.buffer);
     } catch (error) {
       next(error);
     }

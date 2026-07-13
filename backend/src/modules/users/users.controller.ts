@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
+import { ApiError } from '../../utils/api-error';
 import { UserService } from './users.service';
 import type { UserListQuery } from './users.types';
 
@@ -15,11 +16,7 @@ export class UserController {
       const user = await this.userService.getUserById(request.params.id);
 
       if (!user) {
-        response.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          error: { code: 'USER_NOT_FOUND', message: 'User not found', details: [] },
-        });
-        return;
+        throw new ApiError(StatusCodes.NOT_FOUND, 'USER_NOT_FOUND', 'User not found');
       }
 
       response.status(StatusCodes.OK).json({

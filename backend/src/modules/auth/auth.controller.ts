@@ -57,8 +57,6 @@ export class AuthController {
         data: {
           user: result.user,
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          refreshTokenExpiresAt: result.refreshTokenExpiresAt,
         },
       });
     } catch (error) {
@@ -98,8 +96,6 @@ export class AuthController {
         data: {
           user: result.user,
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          refreshTokenExpiresAt: result.refreshTokenExpiresAt,
         },
       });
     } catch (error) {
@@ -140,8 +136,6 @@ export class AuthController {
         data: {
           user: result.user,
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          refreshTokenExpiresAt: result.refreshTokenExpiresAt,
         },
       });
     } catch (error) {

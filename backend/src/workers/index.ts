@@ -79,12 +79,24 @@ export async function processMatchScore(job: Job<MatchScoreJobData>): Promise<vo
 
     const parsedData = (resume as unknown as { parsedData?: { rawText?: string; skills?: string[] } | null }).parsedData ?? null;
 
-    const result = await ai.generateMatchScore({
-      resumeSkills: parsedData?.skills ?? [],
-      jobSkills: jobPosting.extractedSkills,
-      resumeText: parsedData?.rawText ?? '',
-      jobDescription: jobPosting.description,
-    });
+    let result: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[]; improvements: string[] };
+
+    try {
+      result = await ai.generateMatchScore({
+        resumeSkills: parsedData?.skills ?? [],
+        jobSkills: jobPosting.extractedSkills,
+        resumeText: parsedData?.rawText ?? '',
+        jobDescription: jobPosting.description,
+      });
+    } catch {
+      const { computeFallbackMatch } = await import('../modules/matching/matching.service');
+      result = computeFallbackMatch(
+        parsedData?.rawText ?? resume.title,
+        jobPosting.description,
+        jobPosting.extractedSkills,
+      );
+      logger.warn({ matchId, jobId: job.id }, 'AI match failed, used fallback');
+    }
 
     await prisma.matchResult.update({
       where: { id: matchId },
@@ -93,6 +105,7 @@ export async function processMatchScore(job: Job<MatchScoreJobData>): Promise<vo
         matchedSkills: result.matchedSkills,
         missingSkills: result.missingSkills,
         strengths: result.strengths,
+        improvements: result.improvements,
       },
     });
 

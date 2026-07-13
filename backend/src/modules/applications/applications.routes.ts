@@ -36,6 +36,20 @@ applicationsRouter.get(
   applicationController.getApplication,
 );
 
+applicationsRouter.delete(
+  '/:id',
+  authenticateAccessToken,
+  validateRequest({ params: applicationParamsSchema }),
+  applicationController.deleteApplication,
+);
+
+applicationsRouter.patch(
+  '/:id/restore',
+  authenticateAccessToken,
+  validateRequest({ params: applicationParamsSchema }),
+  applicationController.restoreApplication,
+);
+
 applicationsRouter.patch(
   '/:id/status',
   authenticateAccessToken,

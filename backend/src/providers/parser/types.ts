@@ -17,4 +17,5 @@ export type ParsedResume = {
 
 export interface ResumeParser {
   parse(buffer: Buffer, mimeType: string): Promise<ParsedResume>;
+  extractText(buffer: Buffer, mimeType: string): Promise<string>;
 }
