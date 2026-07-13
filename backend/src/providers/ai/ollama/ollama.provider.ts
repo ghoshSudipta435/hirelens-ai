@@ -67,7 +67,8 @@ Return a JSON object with:
 - score: integer 0-100
 - matchedSkills: array of skills present in both
 - missingSkills: array of skills required by the job but not found in resume
-- strengths: array of strong points from the resume relevant to the job`,
+- strengths: array of strong points from the resume relevant to the job
+- improvements: array of actionable suggestions to improve the resume for this job (e.g., "Add experience with Python", "Quantify achievements with metrics")`,
         ),
       },
       {

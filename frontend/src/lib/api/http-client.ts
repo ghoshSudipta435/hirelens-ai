@@ -59,12 +59,8 @@ let refreshPromise: Promise<AuthSession> | null = null;
 
 export function performRefresh(): Promise<AuthSession> {
   if (!refreshPromise) {
-    const storedRefreshToken = useAuthStore.getState().refreshToken;
-
     refreshPromise = apiClient
-      .post<ApiSuccessResponse<AuthSession>>('/auth/refresh', {
-        refreshToken: storedRefreshToken,
-      })
+      .post<ApiSuccessResponse<AuthSession>>('/auth/refresh', {}, { withCredentials: true })
       .then((response) => response.data.data)
       .finally(() => {
         refreshPromise = null;

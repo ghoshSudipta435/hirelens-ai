@@ -26,6 +26,7 @@ export type MatchOutput = {
   matchedSkills: string[];
   missingSkills: string[];
   strengths: string[];
+  improvements: string[];
 };
 
 export type InterviewQuestionInput = {
