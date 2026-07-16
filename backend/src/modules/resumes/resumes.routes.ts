@@ -1,9 +1,18 @@
+import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
 
 import { validateRequest } from '../../middleware/validate-request';
 import { authenticateAccessToken } from '../auth/auth.middleware';
 import { ResumeController } from './resumes.controller';
 import { createResumeSchema, resumeListQuerySchema, resumeParamsSchema, updateResumeSchema } from './resumes.schemas';
+
+function tokenQueryToAuthHeader(request: Request, _response: Response, next: NextFunction) {
+  const token = request.query.token as string | undefined;
+  if (token && !request.headers.authorization) {
+    request.headers.authorization = `Bearer ${token}`;
+  }
+  next();
+}
 
 const resumeController = new ResumeController();
 
@@ -32,6 +41,7 @@ resumesRouter.get(
 
 resumesRouter.get(
   '/:id/file',
+  tokenQueryToAuthHeader,
   authenticateAccessToken,
   validateRequest({ params: resumeParamsSchema }),
   resumeController.getResumeFile,

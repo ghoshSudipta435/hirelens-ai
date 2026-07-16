@@ -113,65 +113,24 @@ export default function MatchesPage() {
                     </div>
                   </div>
 
-                  {/* Matched Skills */}
-                  {match.matchedSkills.length > 0 && (
-                    <div className="mt-3">
-                      <p className="mb-1 text-xs font-medium text-[var(--muted)]">Matched Skills</p>
-                      <div className="flex flex-wrap gap-1">
-                        {match.matchedSkills.slice(0, 8).map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Skill Gap (Missing Skills) */}
-                  {match.missingSkills.length > 0 && (
-                    <div className="mt-3">
-                      <p className="mb-1 text-xs font-medium text-[var(--muted)]">Skill Gap</p>
-                      <div className="flex flex-wrap gap-1">
-                        {match.missingSkills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Strengths */}
-                  {match.strengths.length > 0 && (
-                    <div className="mt-3">
-                      <p className="mb-1 text-xs font-medium text-[var(--muted)]">Strengths</p>
-                      <ul className="space-y-0.5">
-                        {match.strengths.map((s, i) => (
-                          <li key={i} className="text-xs text-[var(--foreground)]">
-                            &bull; {s}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Improvements Needed */}
-                  {match.improvements.length > 0 && (
-                    <div className="mt-3">
-                      <p className="mb-1 text-xs font-medium text-[var(--muted)]">Improvements Needed</p>
-                      <ul className="space-y-0.5">
-                        {match.improvements.map((imp, i) => (
-                          <li key={i} className="text-xs text-[var(--foreground)]">
-                            &bull; {imp}
-                          </li>
-                        ))}
-                      </ul>
+                  {(match.matchedSkills.length > 0 || match.missingSkills.length > 0) && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {match.matchedSkills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {match.missingSkills.slice(0, 3).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        >
+                          {skill}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>

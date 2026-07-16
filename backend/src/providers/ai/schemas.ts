@@ -5,7 +5,6 @@ export const matchOutputSchema = z.object({
   matchedSkills: z.array(z.string()).default([]),
   missingSkills: z.array(z.string()).default([]),
   strengths: z.array(z.string()).default([]),
-  improvements: z.array(z.string()).default([]),
 });
 
 export const interviewQuestionSchema = z.object({

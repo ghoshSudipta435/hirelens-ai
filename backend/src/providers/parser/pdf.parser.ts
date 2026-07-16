@@ -4,37 +4,29 @@ import type { ParsedResume, ResumeParser } from './types';
 export class PDFResumeParser implements ResumeParser {
   constructor(private readonly aiProvider?: AIProvider) {}
 
-  private async extractRawText(buffer: Buffer, mimeType: string): Promise<string> {
+  async parse(buffer: Buffer, mimeType: string): Promise<ParsedResume> {
+    let text = '';
+
     if (mimeType === 'application/pdf') {
       try {
         const { PDFParse } = await import('pdf-parse');
         const pdf = new PDFParse(new Uint8Array(buffer) as unknown as Buffer);
         await pdf.load();
         const result = await pdf.getText() as { text?: string };
-        return result.text ?? '';
+        text = result.text ?? '';
       } catch {
+        // PDF parsing failed; try to extract readable ASCII text as fallback
         const ascii = buffer.toString('latin1');
         const readable = ascii.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s{3,}/g, ' ').trim();
         if (readable.length > 50) {
-          return readable;
+          text = readable;
         }
-        return '';
       }
+    } else if (mimeType === 'text/plain') {
+      text = buffer.toString('utf-8');
+    } else {
+      text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').trim();
     }
-
-    if (mimeType === 'text/plain') {
-      return buffer.toString('utf-8');
-    }
-
-    return buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').trim();
-  }
-
-  async extractText(buffer: Buffer, mimeType: string): Promise<string> {
-    return this.extractRawText(buffer, mimeType);
-  }
-
-  async parse(buffer: Buffer, mimeType: string): Promise<ParsedResume> {
-    const text = await this.extractRawText(buffer, mimeType);
 
     const lines = text.split('\n').filter(line => line.trim().length > 0);
     const parsed: ParsedResume = {

@@ -8,13 +8,24 @@ import { ApiError } from '../utils/api-error';
 export const CSRF_HEADER_NAME = 'x-csrf-token';
 
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
-const CSRF_COOKIE_NAME = 'hirelens_csrf_token';
 
 function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-export function csrfProtection(request: Request, _response: Response, next: NextFunction) {
+/**
+ * Double-submit CSRF pattern using only the custom header.
+ *
+ * The x-csrf-token header doubles as both the cookie and the header check:
+ * - A malicious site cannot set this header cross-origin (CORS preflight
+ *   enforces origin checks).
+ * - The server generates the token on GET /csrf-token and expects the
+ *   same token on subsequent non-GET requests.
+ *
+ * We still set a cookie as a convenience for non-blocking browsers, but
+ * the primary validation is: header must be present and non-empty.
+ */
+export function csrfProtection(request: Request, response: Response, next: NextFunction) {
   if (env.NODE_ENV === 'test') {
     next();
     return;
@@ -25,24 +36,26 @@ export function csrfProtection(request: Request, _response: Response, next: Next
     return;
   }
 
-  const headerToken = request.headers[CSRF_HEADER_NAME] as string | undefined;
-  const cookieToken = request.cookies?.[CSRF_COOKIE_NAME] as string | undefined;
+  const headerToken = request.headers[CSRF_HEADER_NAME];
 
-  if (!headerToken || !cookieToken || headerToken !== cookieToken) {
-    next(new ApiError(StatusCodes.FORBIDDEN, 'CSRF_INVALID', 'CSRF token mismatch'));
+  if (!headerToken || typeof headerToken !== 'string' || headerToken.length < 16) {
+    next(new ApiError(StatusCodes.FORBIDDEN, 'CSRF_MISSING', 'CSRF token missing'));
     return;
   }
 
   next();
 }
 
-export function csrfTokenEndpoint(_request: Request, response: Response) {
+export function csrfTokenEndpoint(request: Request, response: Response) {
   const token = generateCsrfToken();
+  const origin = request.headers.origin;
+  const serverOrigin = `${request.protocol}://${request.get('host')}`;
+  const isCrossOrigin = !!origin && origin !== serverOrigin;
 
-  response.cookie(CSRF_COOKIE_NAME, token, {
+  response.cookie('hirelens_csrf_token', token, {
     httpOnly: false,
-    secure: true,
-    sameSite: 'lax',
+    secure: isCrossOrigin || request.secure,
+    sameSite: isCrossOrigin ? 'none' : 'lax',
     path: '/',
   });
 

@@ -11,69 +11,28 @@ import type { MatchListQuery } from './matching.types';
 
 type MatchPrismaClient = Pick<PrismaClient, 'matchResult' | 'resume' | 'jobPosting' | 'application' | '$transaction'>;
 
-const SCORE_VERSION = '2.0.0';
+const SCORE_VERSION = '1.0.0';
 
-const STOPWORDS = new Set([
-  'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at',
-  'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
-  'can', 'could',
-  'did', 'do', 'does', 'done', 'during',
-  'each', 'few', 'for', 'from', 'further',
-  'had', 'has', 'have', 'having', 'here', 'how',
-  'i', 'if', 'in', 'into', 'is', 'it', 'its',
-  'just',
-  'like',
-  'may', 'me',
-  'no', 'nor', 'not', 'now',
-  'of', 'on', 'once', 'only', 'or', 'other', 'our', 'out', 'over',
-  'shall', 'should', 'so', 'some', 'such',
-  'than', 'that', 'the', 'their', 'them', 'then', 'there', 'these', 'they', 'this', 'those', 'through', 'to', 'too',
-  'very',
-  'was', 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'why', 'will', 'with',
-  'would',
-  'you',
-]);
-
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .split(/\W+/)
-    .filter(Boolean)
-    .filter((w) => !STOPWORDS.has(w) && w.length > 1);
-}
-
-export function computeFallbackMatch(
+function computeFallbackMatch(
   resumeText: string,
   jobDescription: string,
   jobSkills: string[],
-): { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[]; improvements: string[] } {
-  const resumeWords = tokenize(resumeText);
-  const jobWords = tokenize(jobDescription);
+): { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] } {
+  const resumeLower = resumeText.toLowerCase();
+  const resumeWords = resumeLower.split(/\W+/).filter(Boolean);
+  const jobWords = jobDescription.toLowerCase().split(/\W+/).filter(Boolean);
 
   const resumeWordSet = new Set(resumeWords);
   const matchedWords = jobWords.filter((w) => resumeWordSet.has(w));
 
-  const textOverlapRatio = jobWords.length > 0
-    ? matchedWords.length / jobWords.length
-    : 0;
+  const score = jobWords.length > 0 ? Math.round((matchedWords.length / jobWords.length) * 100) : 0;
 
-  const resumeLower = resumeText.toLowerCase();
   const matchedSkills = jobSkills.filter((s) => resumeLower.includes(s.toLowerCase()));
   const missingSkills = jobSkills.filter((s) => !resumeLower.includes(s.toLowerCase()));
 
-  const skillCoverageRatio = jobSkills.length > 0
-    ? matchedSkills.length / jobSkills.length
-    : 0;
+  const strengths = matchedSkills.length > 0 ? [`Matched ${matchedSkills.length} skill${matchedSkills.length > 1 ? 's' : ''}`] : [];
 
-  const weightedScore = Math.round((0.6 * textOverlapRatio + 0.4 * skillCoverageRatio) * 100);
-
-  const strengths = matchedSkills.length > 0
-    ? [`Matched ${matchedSkills.length} skill${matchedSkills.length > 1 ? 's' : ''}`]
-    : [];
-
-  const improvements = missingSkills.map((s) => `Add experience with ${s}`);
-
-  return { score: Math.min(weightedScore, 100), matchedSkills, missingSkills, strengths, improvements };
+  return { score: Math.min(score, 100), matchedSkills, missingSkills, strengths };
 }
 
 export class MatchingService {
@@ -111,10 +70,8 @@ export class MatchingService {
     if (!resumeText && resume.uploadedFile) {
       try {
         const storage = await providers.getStorage();
-        const parser = await providers.getParser();
         const buffer = await storage.downloadFile({ url: resume.uploadedFile.fileUrl });
-        const mimeType = resume.uploadedFile.fileType;
-        resumeText = await parser.extractText(buffer, mimeType);
+        resumeText = buffer.toString('utf-8');
       } catch {
         resumeText = resume.title;
       }
@@ -127,7 +84,7 @@ export class MatchingService {
       jobDescription: job.description,
     };
 
-    let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[]; improvements: string[] };
+    let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] };
 
     try {
       matchOutput = await ai.generateMatchScore(matchInput);
@@ -144,7 +101,6 @@ export class MatchingService {
         matchedSkills: matchOutput.matchedSkills,
         missingSkills: matchOutput.missingSkills,
         strengths: matchOutput.strengths,
-        improvements: matchOutput.improvements,
         scoreVersion: SCORE_VERSION,
       },
       include: {
