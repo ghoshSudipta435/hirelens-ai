@@ -12,9 +12,12 @@ function runDeploy() {
 
     const matchName = output.match(/Migration name: (\S+)/);
     const isAlreadyExists = output.includes('already exists');
+    
+    // Also handle P3009: The `migration_name` migration started at ... failed
+    const failedMatch = output.match(/The `([^`]+)` migration started/);
 
-    if (matchName && isAlreadyExists) {
-      const migrationName = matchName[1];
+    if ((matchName && isAlreadyExists) || failedMatch) {
+      const migrationName = (matchName && matchName[1]) || (failedMatch && failedMatch[1]);
       console.log(`\nDetected that migration ${migrationName} actually exists in the database. Resolving as applied...`);
       try {
         execSync(`npx prisma migrate resolve --applied ${migrationName} --schema=prisma/schema.prisma`, { stdio: 'inherit' });
