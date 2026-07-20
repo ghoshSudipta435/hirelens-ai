@@ -57,4 +57,4 @@ EXPOSE 4000
 WORKDIR /app/backend
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:4000/api/v1/health || exit 1
-CMD ["sh", "-c", "npx prisma migrate resolve --rolled-back 20260531_add_auth_audit_events --schema=prisma/schema.prisma || true && npx prisma migrate deploy --schema=prisma/schema.prisma && exec node dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate resolve --applied 20260531_add_auth_audit_events --schema=prisma/schema.prisma || true && npx prisma migrate deploy --schema=prisma/schema.prisma && exec node dist/server.js"]
