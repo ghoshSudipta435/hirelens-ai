@@ -76,7 +76,7 @@ describe('MatchingService', () => {
     });
 
     const match = await service.getMatch('match-1', 'student-1', 'STUDENT');
-    expect(match.score).toBe(90);
+    expect((match as any).score).toBe(90);
   });
 
   it('lists matches for a user', async () => {
@@ -95,6 +95,6 @@ describe('MatchingService', () => {
     });
 
     const result = await service.listMatches('student-1', 'STUDENT', { page: 1, limit: 10 });
-    expect(result.items).toHaveLength(1);
+    expect((result as any).items).toHaveLength(1);
   });
 });

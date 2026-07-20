@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient, type UserRole } from '@prisma/client';
 
 import { prisma } from '../../config/prisma';
+import { userCache } from '../../providers/cache/keys';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import type { PublicUser } from '../auth/auth.types';
 import type { UserListQuery } from './users.types';
@@ -15,13 +16,16 @@ export class UserService {
   }
 
   async getUserById(userId: string): Promise<PublicUser | null> {
+    const cached = await userCache.getProfile(userId);
+    if (cached) return cached as PublicUser;
+
     const user = await this.prismaClient.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) return null;
 
-    return {
+    const publicUser: PublicUser = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -29,6 +33,10 @@ export class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+
+    userCache.setProfile(userId, publicUser).catch(() => {});
+
+    return publicUser;
   }
 
   async listUsers(query: UserListQuery) {

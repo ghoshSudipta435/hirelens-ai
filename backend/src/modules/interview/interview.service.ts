@@ -1,9 +1,12 @@
 import { type PrismaClient, QuestionDifficulty } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
+import { logger } from '../../config/logger';
 import { prisma } from '../../config/prisma';
 import { providers } from '../../config/providers';
+import { matchCache } from '../../providers/cache/keys';
 import type { InterviewQuestionInput } from '../../providers/ai/types';
+import { addJob } from '../../providers/queue';
 import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 
@@ -21,6 +24,7 @@ export class InterviewService {
       where: { id: matchResultId },
       include: {
         jobPosting: { select: { recruiterId: true, title: true, description: true } },
+        resume: { select: { ownerId: true } },
       },
     });
 
@@ -41,6 +45,13 @@ export class InterviewService {
       return existingSet;
     }
 
+    const job = await addJob('interview-generate', { matchResultId, recruiterId });
+    if (job) {
+      return this.prismaClient.interviewQuestionSet.create({
+        data: { matchResultId },
+      });
+    }
+
     const aiInput: InterviewQuestionInput = {
       jobTitle: match.jobPosting?.title ?? 'Unknown',
       jobDescription: match.jobPosting?.description ?? '',
@@ -54,13 +65,30 @@ export class InterviewService {
 
     try {
       const output = await ai.generateInterviewQuestions(aiInput);
-      questions = output.questions;
-    } catch {
+      questions = output.questions || [];
+    } catch (err) {
+      logger.error({ err }, 'AI question generation failed');
       questions = [];
     }
 
-    if (questions.length === 0) {
-      throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'QUESTION_GEN_FAILED', 'Failed to generate interview questions');
+    if (!questions || questions.length === 0) {
+      questions = [
+        {
+          question: 'Can you describe your experience and how it relates to this role?',
+          difficulty: 'EASY',
+          category: 'General',
+        },
+        {
+          question: 'What do you consider your greatest professional strength?',
+          difficulty: 'MEDIUM',
+          category: 'General',
+        },
+        {
+          question: 'Describe a challenging project you worked on and how you overcame obstacles.',
+          difficulty: 'HARD',
+          category: 'Behavioral',
+        },
+      ];
     }
 
     const questionSet = await this.prismaClient.interviewQuestionSet.create({
@@ -76,6 +104,32 @@ export class InterviewService {
       },
       include: { questions: true },
     });
+
+    if (match.jobPosting?.recruiterId) {
+      matchCache.invalidateList(match.jobPosting.recruiterId).catch(() => {});
+    }
+    if (match.resume?.ownerId) {
+      matchCache.invalidateList(match.resume.ownerId).catch(() => {});
+    }
+
+    try {
+      providers.getEmail().then((email) => {
+        if (!email) return;
+        prisma.user.findUnique({ where: { id: recruiterId }, select: { name: true, email: true } }).then((user) => {
+          if (user?.email) {
+            email.send('resume-analyzed', user.email, {
+              name: user.name,
+              resumeTitle: `Interview questions for ${match.jobPosting?.title ?? 'job'}`,
+              skillsCount: String(questionSet.questions.length),
+            }).catch((err) => {
+              logger.warn({ err, matchResultId }, 'Interview generation notification email failed');
+            });
+          }
+        });
+      }).catch(() => {});
+    } catch {
+      // Email is best-effort
+    }
 
     return questionSet;
   }

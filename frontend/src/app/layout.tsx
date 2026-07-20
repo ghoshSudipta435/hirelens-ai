@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { ErrorBoundary } from '@/components/feedback/error-boundary';
 import { AppProviders } from '@/providers/app-providers';
 
 import './globals.css';
@@ -113,7 +114,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         />
       </head>
       <body>
-        <AppProviders>{children}</AppProviders>
+        <ErrorBoundary>
+          <AppProviders>{children}</AppProviders>
+        </ErrorBoundary>
       </body>
     </html>
   );

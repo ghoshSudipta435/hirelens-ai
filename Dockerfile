@@ -1,4 +1,4 @@
-ARG NODE_VERSION=20
+ARG NODE_VERSION=20.9.0
 
 # ---- Backend Build ----
 FROM node:${NODE_VERSION}-alpine AS backend-build
@@ -8,7 +8,7 @@ COPY tsconfig.base.json ./
 COPY backend/ ./backend/
 RUN npm ci
 
-# 👇 RESTORE THESE THREE CRITICAL LINES
+# Generate Prisma client and build backend
 RUN npx prisma generate --schema=backend/prisma/schema.prisma
 RUN npm run build --workspace=backend
 RUN npm prune --omit=dev
@@ -38,6 +38,8 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 USER appuser
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:3000 || exit 1
 CMD ["node", "server.js"]
 
 # ---- Backend Runtime ----
@@ -55,4 +57,4 @@ EXPOSE 4000
 WORKDIR /app/backend
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:4000/api/v1/health || exit 1
-CMD npx prisma db push --accept-data-loss --schema=prisma/schema.prisma && node dist/server.js
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=prisma/schema.prisma && exec node dist/server.js"]

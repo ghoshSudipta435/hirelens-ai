@@ -11,10 +11,12 @@ declare global {
   var __prisma__: PrismaClient | undefined;
 }
 
+const isNeon = env.DATABASE_URL.includes('neon.tech');
+
 export const prisma =
   globalThis.__prisma__ ??
   new PrismaClient({
-    adapter: new PrismaNeon({ connectionString: env.DATABASE_URL }),
+    ...(isNeon && { adapter: new PrismaNeon({ connectionString: env.DATABASE_URL }) }),
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
 

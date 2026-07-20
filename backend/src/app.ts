@@ -16,9 +16,9 @@ import { sendHealthResponse } from './routes/health.route';
 const globalRateLimit = rateLimit({
   windowMs: 60 * 1000,
   limit: env.NODE_ENV === 'production' ? 60 : 200,
-  standardHeaders: 'draft-7',
+  standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests', details: [] } },
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests', details: [] } },
 });
 
 export function createApp() {
@@ -30,11 +30,29 @@ export function createApp() {
   app.get('/health', sendHealthResponse);
 
   app.use(requestLogger);
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: false,
+    }),
+  );
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin: (requestOrigin, callback) => {
+        if (env.NODE_ENV !== 'production') {
+          if (!requestOrigin || requestOrigin.startsWith('http://localhost:') || requestOrigin.startsWith('http://127.0.0.1:')) {
+            return callback(null, requestOrigin ?? env.CLIENT_ORIGIN);
+          }
+        }
+        if (requestOrigin === env.CLIENT_ORIGIN) {
+          return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+      },
       credentials: true,
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'x-csrf-token', 'Authorization'],
     }),
   );
   app.use(cookieParser());

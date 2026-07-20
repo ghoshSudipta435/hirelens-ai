@@ -9,14 +9,18 @@ const tokenService = new TokenService();
 
 export function authenticateAccessToken(request: Request, _response: Response, next: NextFunction) {
   const authorizationHeader = request.headers.authorization;
+  let token: string | undefined;
 
-  if (!authorizationHeader?.startsWith('Bearer ')) {
-    next(new ApiError(StatusCodes.UNAUTHORIZED, 'UNAUTHORIZED', 'Missing access token'));
-
-    return;
+  if (authorizationHeader?.startsWith('Bearer ')) {
+    token = authorizationHeader.slice('Bearer '.length);
+  } else if (typeof request.query.token === 'string') {
+    token = request.query.token;
   }
 
-  const token = authorizationHeader.slice('Bearer '.length);
+  if (!token) {
+    next(new ApiError(StatusCodes.UNAUTHORIZED, 'UNAUTHORIZED', 'Missing access token'));
+    return;
+  }
 
   try {
     const payload = tokenService.verifyAccessToken(token);

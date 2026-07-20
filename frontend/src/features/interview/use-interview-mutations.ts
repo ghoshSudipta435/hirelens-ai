@@ -14,6 +14,7 @@ export function useGenerateQuestionsMutation() {
     mutationFn: interviewService.generateQuestions,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interview-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       pushToast({ title: 'Questions generated', variant: 'success' });
     },
     onError: (error) => {

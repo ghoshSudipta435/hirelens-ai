@@ -83,6 +83,12 @@ function StudentDashboard() {
         href="/matches"
         accent="bg-emerald-100 text-emerald-700"
       />
+      <DashboardCard
+        title="Interviews"
+        description="Review generated interview questions"
+        href="/interviews"
+        accent="bg-purple-100 text-purple-700"
+      />
     </div>
   );
 }
@@ -90,8 +96,10 @@ function StudentDashboard() {
 function RecruiterDashboard() {
   const user = useAuthStore((state) => state.user);
   const fetchJobs = useCallback(async () => jobService.listJobs({ limit: 1 }), []);
+  const fetchMatches = useCallback(async () => matchingService.listMatches({ limit: 1 }), []);
 
   const { data: jobs } = useQuery({ queryKey: ['jobs', 1], queryFn: fetchJobs, enabled: !!user });
+  const { data: matches } = useQuery({ queryKey: ['matches', 1], queryFn: fetchMatches, enabled: !!user });
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,6 +115,19 @@ function RecruiterDashboard() {
         description="Review candidate applications"
         href="/applications"
         accent="bg-amber-100 text-amber-700"
+      />
+      <DashboardCard
+        title="Match Results"
+        description="See candidate match scores"
+        count={matches?.total ?? 0}
+        href="/matches"
+        accent="bg-emerald-100 text-emerald-700"
+      />
+      <DashboardCard
+        title="Interviews"
+        description="Generate and view interview questions"
+        href="/interviews"
+        accent="bg-purple-100 text-purple-700"
       />
     </div>
   );

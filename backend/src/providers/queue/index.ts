@@ -8,9 +8,12 @@ let connection: any = null;
 
 function getConnection(): any {
   if (!connection) {
+    if (!env.REDIS_URL) {
+      throw new Error('REDIS_URL is required to connect to the queue');
+    }
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const IORedis = require('ioredis');
-    connection = new IORedis(env.REDIS_URL ?? 'redis://localhost:6379', {
+    connection = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
     });

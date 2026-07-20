@@ -5,11 +5,12 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 4000
+        value: 10000
       - key: API_PREFIX
         value: /api/v1
       - key: GEMINI_API_KEY
@@ -39,4 +40,12 @@ services:
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false

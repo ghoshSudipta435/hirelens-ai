@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: 'html',
   timeout: 30000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'cd .. && npm run dev --prefix backend & npm run dev --prefix frontend',
-      url: 'http://localhost:3000',
+      url: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },

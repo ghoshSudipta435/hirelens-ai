@@ -20,9 +20,14 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
-export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1).optional(),
-}).default({});
+export const refreshTokenSchema = z
+  .object({
+    refreshToken: z.string().min(1).nullable().optional(),
+  })
+  .default({})
+  .transform((data) => ({
+    refreshToken: data.refreshToken ?? undefined,
+  }));
 
 export const logoutSchema = refreshTokenSchema;
 

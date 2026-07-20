@@ -13,6 +13,7 @@ vi.mock('../../src/config/prisma', () => ({
 vi.mock('../../src/providers/storage/cloudinary.storage', () => ({
   cloudinaryStorage: {
     uploadFile: vi.fn().mockResolvedValue({ publicId: 'pub', secureUrl: 'http://test.url' }),
+    downloadFile: vi.fn().mockResolvedValue(Buffer.from('test resume content')),
     deleteFile: vi.fn().mockResolvedValue(undefined),
     createSignedUrl: vi.fn().mockReturnValue('http://test.url/signed'),
   },
@@ -33,7 +34,6 @@ vi.mock('../../src/config/providers', () => ({
 
 describe('applications routes', () => {
   beforeEach(() => {
-    vi.resetModules();
     prismaFixture.state.users.length = 0;
     prismaFixture.state.resumes.length = 0;
     prismaFixture.state.jobPostings.length = 0;
@@ -41,8 +41,15 @@ describe('applications routes', () => {
     prismaFixture.state.uploads.length = 0;
     process.env.NODE_ENV = 'test';
     process.env.CLIENT_ORIGIN = 'http://localhost:3000';
+    process.env.DATABASE_URL =
+      'postgresql://user:pass@ep-test-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require';
+    process.env.DIRECT_URL =
+      'postgresql://user:pass@ep-test.us-east-2.aws.neon.tech/neondb?sslmode=require';
     process.env.JWT_SECRET = 'test-access-secret-with-at-least-32-characters';
     process.env.JWT_EXPIRES_IN = '15m';
+    process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-with-at-least-32-chars';
+    process.env.JWT_REFRESH_EXPIRES_IN = '7d';
+    process.env.BCRYPT_SALT_ROUNDS = '10';
     process.env.LOG_LEVEL = 'silent';
   });
 

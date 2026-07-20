@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import multer from 'multer';
 import { StatusCodes } from 'http-status-codes';
@@ -86,11 +87,8 @@ export function uploadSingleFileStream(fieldName: string): RequestHandler {
         return;
       }
 
-      // Attach a readable stream from the buffer for downstream streaming
       if (request.file) {
-        const { Readable } = require('node:stream') as typeof import('node:stream');
-        const fileBuffer = request.file.buffer;
-        (request.file as Express.Multer.File & { stream: import('node:stream').Readable }).stream = Readable.from(fileBuffer);
+        (request.file as Express.Multer.File & { stream: Readable }).stream = Readable.from(request.file.buffer);
       }
 
       next();

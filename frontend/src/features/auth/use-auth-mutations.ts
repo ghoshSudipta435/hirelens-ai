@@ -58,6 +58,7 @@ export function useLogoutMutation() {
     onSettled: () => {
       clearSession();
       queryClient.clear();
+      window.location.href = '/login';
     },
   });
 }

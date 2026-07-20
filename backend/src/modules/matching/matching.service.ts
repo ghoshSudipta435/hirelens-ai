@@ -4,6 +4,8 @@ import { StatusCodes } from 'http-status-codes';
 import { prisma } from '../../config/prisma';
 import { providers } from '../../config/providers';
 import type { MatchInput } from '../../providers/ai/types';
+import { addJob } from '../../providers/queue';
+import { aiCache, matchCache } from '../../providers/cache/keys';
 import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import type { PreviewMatchInputDto } from './matching.schemas';
@@ -84,12 +86,19 @@ export class MatchingService {
       jobDescription: job.description,
     };
 
+    const cachedScore = await aiCache.getMatchScore(data.resumeId, data.jobPostingId);
+
     let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] };
 
-    try {
-      matchOutput = await ai.generateMatchScore(matchInput);
-    } catch {
-      matchOutput = computeFallbackMatch(resumeText, job.description, job.extractedSkills);
+    if (cachedScore) {
+      matchOutput = cachedScore as typeof matchOutput;
+    } else {
+      try {
+        matchOutput = await ai.generateMatchScore(matchInput);
+        aiCache.setMatchScore(data.resumeId, data.jobPostingId, matchOutput).catch(() => {});
+      } catch {
+        matchOutput = computeFallbackMatch(resumeText, job.description, job.extractedSkills);
+      }
     }
 
     const matchResult = await this.prismaClient.matchResult.create({
@@ -109,10 +118,23 @@ export class MatchingService {
       },
     });
 
+    matchCache.set(matchResult.id, matchResult).catch(() => {});
+    matchCache.invalidateList(userId).catch(() => {});
+
+    addJob('match-score', {
+      matchId: matchResult.id,
+      resumeId: data.resumeId,
+      jobPostingId: data.jobPostingId,
+      ownerId: userId,
+    });
+
     return matchResult;
   }
 
   async getMatch(matchId: string, userId: string, role: string) {
+    const cached = await matchCache.get(matchId);
+    if (cached) return cached;
+
     const match = await this.prismaClient.matchResult.findUnique({
       where: { id: matchId, deletedAt: null },
       include: {
@@ -132,11 +154,17 @@ export class MatchingService {
       throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'Access denied');
     }
 
+    matchCache.set(matchId, match).catch(() => {});
+
     return match;
   }
 
   async listMatches(userId: string, role: string, query: MatchListQuery) {
     const { page, limit, skip } = parsePagination(query);
+
+    const filterKey = JSON.stringify({ role, page, limit });
+    const cached = await matchCache.getList(userId, filterKey);
+    if (cached) return cached;
 
     const where: Record<string, unknown> = {
       deletedAt: null,
@@ -156,12 +184,16 @@ export class MatchingService {
         include: {
           resume: { select: { id: true, title: true } },
           jobPosting: { select: { id: true, title: true } },
+          questionSets: { select: { id: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
       this.prismaClient.matchResult.count({ where }),
     ]);
 
-    return buildPaginatedResponse(items, total, page, limit);
+    const result = buildPaginatedResponse(items, total, page, limit);
+    matchCache.setList(userId, filterKey, result).catch(() => {});
+
+    return result;
   }
 }

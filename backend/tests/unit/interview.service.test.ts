@@ -36,7 +36,7 @@ describe('InterviewService', () => {
 
     const qs = await service.generateQuestions('recruiter-1', 'match-1');
 
-    expect(qs.questions).toHaveLength(3);
+    expect((qs as any).questions).toHaveLength(3);
     expect(state.interviewQuestionSets).toHaveLength(1);
   });
 
@@ -63,8 +63,8 @@ describe('InterviewService', () => {
     });
 
     const qs = await service.generateQuestions('recruiter-1', 'match-1');
-    expect(qs.questions).toHaveLength(1);
-    expect(qs.questions[0]!.question).toBe('Existing?');
+    expect((qs as any).questions).toHaveLength(1);
+    expect((qs as any).questions[0]!.question).toBe('Existing?');
   });
 
   it('throws if match result not found', async () => {

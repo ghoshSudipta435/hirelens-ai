@@ -18,6 +18,9 @@ export type MatchResult = {
     id: string;
     title: string;
   };
+  questionSets?: {
+    id: string;
+  }[];
 };
 
 export type PreviewMatchRequest = {

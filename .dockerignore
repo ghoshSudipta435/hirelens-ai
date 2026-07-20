@@ -7,3 +7,11 @@ node_modules
 coverage
 dist
 .next
+tests/
+.github/
+docs/
+.editorconfig
+.prettierrc.json
+.prettierignore
+.nvmrc
+*.yml

@@ -1,8 +1,10 @@
 import { Prisma, type PrismaClient, ResumeStatus, type ResumeAuditEventType, type UploadedFile } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
+import { logger } from '../../config/logger';
 import { prisma } from '../../config/prisma';
 import { providers } from '../../config/providers';
+import { addJob } from '../../providers/queue';
 import type { CloudinaryStorage } from '../../providers/storage/cloudinary.storage';
 import { cloudinaryStorage } from '../../providers/storage/cloudinary.storage';
 import { ApiError } from '../../utils/api-error';
@@ -58,8 +60,12 @@ export class ResumeService {
       },
     }) as unknown as ResumeWithFile;
 
-    this.enrichResumeWithAi(resume.id, file).catch(() => {
-      // AI enrichment is best-effort; resume creation succeeds regardless
+    addJob('resume-parse', { resumeId: resume.id, ownerId: userId }).then((job) => {
+      if (!job) {
+        this.enrichResumeWithAi(resume.id, file).catch((err) => {
+          logger.warn({ err, resumeId: resume.id }, 'Resume AI enrichment failed');
+        });
+      }
     });
 
     return resume;
@@ -86,9 +92,69 @@ export class ResumeService {
           where: { id: resumeId },
           data: { parsedData: parsedData as Prisma.InputJsonValue },
         });
+
+        this.autoPreviewMatches(resumeId, file.ownerId).catch((err) => {
+          logger.warn({ err, resumeId }, 'Auto-preview match failed');
+        });
       }
     } catch {
       // Parsing and AI enrichment is best-effort; resume creation succeeds regardless
+    }
+  }
+
+  private async autoPreviewMatches(resumeId: string, ownerId: string): Promise<void> {
+    const activeJobs = await prisma.jobPosting.findMany({
+      where: { status: 'ACTIVE', deletedAt: null },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (activeJobs.length === 0) return;
+
+    const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+    if (!resume) return;
+
+    const parsedData = (resume as unknown as { parsedData?: { rawText?: string; skills?: string[] } | null }).parsedData ?? null;
+    const resumeText = parsedData?.rawText ?? '';
+    const resumeSkills = parsedData?.skills ?? [];
+
+    const ai = await providers.getAI();
+
+    for (const job of activeJobs) {
+      try {
+        const matchInput = {
+          resumeSkills,
+          jobSkills: job.extractedSkills,
+          resumeText,
+          jobDescription: job.description,
+        };
+
+        let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] };
+        try {
+          matchOutput = await ai.generateMatchScore(matchInput);
+        } catch {
+          const resumeLower = matchInput.resumeText.toLowerCase();
+          const matchedSkills = matchInput.jobSkills.filter((s) => resumeLower.includes(s.toLowerCase()));
+          const missingSkills = matchInput.jobSkills.filter((s) => !resumeLower.includes(s.toLowerCase()));
+          const score = matchInput.jobSkills.length > 0 ? Math.round((matchedSkills.length / matchInput.jobSkills.length) * 100) : 0;
+          matchOutput = { score: Math.min(score, 100), matchedSkills, missingSkills, strengths: matchedSkills.length > 0 ? [`Matched ${matchedSkills.length} skills`] : [] };
+        }
+
+        await prisma.matchResult.create({
+          data: {
+            contextType: 'PREVIEW',
+            resumeId,
+            jobPostingId: job.id,
+            score: matchOutput.score,
+            matchedSkills: matchOutput.matchedSkills,
+            missingSkills: matchOutput.missingSkills,
+            strengths: matchOutput.strengths,
+            scoreVersion: '1.0.0',
+          },
+        });
+      } catch {
+        // Best-effort per job
+      }
     }
   }
 

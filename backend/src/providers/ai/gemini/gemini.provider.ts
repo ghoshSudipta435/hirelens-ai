@@ -78,7 +78,7 @@ Return a JSON object with:
   async generateInterviewQuestions(input: InterviewQuestionInput): Promise<InterviewQuestionOutput> {
     const content = await this.generateContent(
       buildSystemPrompt(
-        `You are an interview question generator. Given a job description and a candidate's skill profile, generate relevant interview questions.
+        `You are an interview question generator. Given a job description and a candidate's skill profile, generate relevant interview questions. Even if there are no matched skills, generate fundamental questions based on the job description to evaluate the candidate's potential.
 Return a JSON object with:
 - questions: array of { question: string, difficulty: "EASY" | "MEDIUM" | "HARD", category: string }`,
       ),

@@ -11,6 +11,7 @@ coverage/
 .env.*
 !.env.example
 !.env.local.example
+!.env.production.example
 
 # prisma
 backend/prisma/dev.db

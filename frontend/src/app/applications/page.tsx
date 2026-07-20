@@ -11,6 +11,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import * as applicationService from '@/services/application.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUpdateApplicationStatusMutation } from '@/features/applications/use-application-mutations';
+import { appEnv } from '@/config/env';
 
 const statusColors: Record<string, string> = {
   SUBMITTED: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -22,6 +23,7 @@ const statusColors: Record<string, string> = {
 export default function ApplicationsPage() {
   const [page, setPage] = useState(1);
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const updateStatus = useUpdateApplicationStatusMutation();
 
   const fetchApplications = useCallback(async () => {
@@ -85,16 +87,26 @@ export default function ApplicationsPage() {
                       </p>
                     </div>
                     {user?.role === 'RECRUITER' ? (
-                      <select
-                        value={app.status}
-                        onChange={(e) => updateStatus.mutate({ id: app.id, status: e.target.value })}
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium outline-none ${statusColors[app.status] ?? ''}`}
-                      >
-                        <option value="SUBMITTED">Submitted</option>
-                        <option value="REVIEWED">Reviewed</option>
-                        <option value="SHORTLISTED">Shortlisted</option>
-                        <option value="REJECTED">Rejected</option>
-                      </select>
+                      <div className="flex items-center gap-3">
+                        <a
+                          href={`${appEnv.apiBaseUrl}/applications/${app.id}/resume/file?download=true&token=${accessToken}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                        >
+                          View Resume
+                        </a>
+                        <select
+                          value={app.status}
+                          onChange={(e) => updateStatus.mutate({ id: app.id, status: e.target.value })}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium outline-none ${statusColors[app.status] ?? ''}`}
+                        >
+                          <option value="SUBMITTED">Submitted</option>
+                          <option value="REVIEWED">Reviewed</option>
+                          <option value="SHORTLISTED">Shortlisted</option>
+                          <option value="REJECTED">Rejected</option>
+                        </select>
+                      </div>
                     ) : (
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[app.status] ?? ''}`}>
                         {app.status}

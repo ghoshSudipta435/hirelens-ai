@@ -118,6 +118,10 @@ export class AuthController {
   refresh = async (request: RefreshRequest, response: Response, next: NextFunction) => {
     try {
       const refreshToken = this.getRefreshTokenFromRequest(request);
+      if (!refreshToken) {
+        response.status(StatusCodes.NO_CONTENT).send();
+        return;
+      }
       const result = await this.authService.refresh(refreshToken);
 
       response.cookie(
@@ -159,7 +163,9 @@ export class AuthController {
   logout = async (request: LogoutRequest, response: Response, next: NextFunction) => {
     try {
       const refreshToken = this.getRefreshTokenFromRequest(request);
-      await this.authService.logout(refreshToken);
+      if (refreshToken) {
+        await this.authService.logout(refreshToken);
+      }
 
       response.clearCookie(
         REFRESH_TOKEN_COOKIE_NAME,
@@ -220,7 +226,7 @@ export class AuthController {
     }
   };
 
-  private getRefreshTokenFromRequest(request: RefreshTokenSourceRequest): string {
+  private getRefreshTokenFromRequest(request: RefreshTokenSourceRequest): string | null {
     const bodyToken = request.body.refreshToken;
     const cookies = request.cookies;
     const cookieToken = cookies?.[REFRESH_TOKEN_COOKIE_NAME];
@@ -228,7 +234,7 @@ export class AuthController {
     const refreshToken = cookieToken ?? bodyToken;
 
     if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'MISSING_REFRESH_TOKEN', 'Refresh token is required');
+      return null;
     }
 
     return refreshToken;

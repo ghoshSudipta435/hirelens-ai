@@ -67,7 +67,7 @@ describe('JobService', () => {
     });
 
     const job = await service.getJob('job-1');
-    expect(job.title).toBe('Engineer');
+    expect((job as any).title).toBe('Engineer');
   });
 
   it('throws when getting a non-existent job', async () => {

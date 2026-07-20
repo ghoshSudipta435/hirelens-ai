@@ -33,6 +33,13 @@ function gracefulShutdown(signal: string) {
   server.close(async () => {
     logger.info('HTTP server closed');
     try {
+      const { stopWorkers } = await import('./workers');
+      await stopWorkers();
+      logger.info('Background workers stopped');
+    } catch (error) {
+      logger.warn({ err: error }, 'Error stopping background workers');
+    }
+    try {
       await prisma.$disconnect();
       logger.info('Database connections closed');
     } catch (error) {

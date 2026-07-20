@@ -63,6 +63,12 @@ export const matchCache = {
       { prefix: MATCH_PREFIX, ttlSeconds: MATCH_TTL }
     );
   },
+  async getList(userId: string, filterKey: string) {
+    return cacheGet<unknown>(cacheKeys.matchList(userId, filterKey), { prefix: MATCH_PREFIX, ttlSeconds: MATCH_TTL });
+  },
+  async setList(userId: string, filterKey: string, data: unknown) {
+    return cacheSet(cacheKeys.matchList(userId, filterKey), data, { prefix: MATCH_PREFIX, ttlSeconds: MATCH_TTL });
+  },
   async invalidateList(userId: string) {
     await cacheDeletePattern(`matches:${userId}:*`, { prefix: MATCH_PREFIX });
   },

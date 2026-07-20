@@ -45,6 +45,18 @@ export const logger = pino({
 
 export const requestLogger = pinoHttp({
   logger,
+  serializers: {
+    req: (req) => {
+      const url = req.url ? req.url.replace(/([?&]token=)[^&]+/, '$1[REDACTED]') : req.url;
+      // We mutate the raw req object temporarily for logging, but pino-http already copies it
+      // To be safe, we just return the standard serialized req with the replaced URL
+      const serialized = pino.stdSerializers.req(req);
+      serialized.url = url;
+      return serialized;
+    },
+    res: pino.stdSerializers.res,
+    err: pino.stdSerializers.err,
+  },
   genReqId: (request) => {
     const headerRequestId = request.headers['x-request-id'];
 

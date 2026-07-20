@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { validateRequest } from '../../middleware/validate-request';
 import { authenticateAccessToken } from '../auth/auth.middleware';
 import { ResumeController } from './resumes.controller';
+import { createResumeRateLimit, updateResumeRateLimit } from './resumes.rate-limit';
 import { createResumeSchema, resumeListQuerySchema, resumeParamsSchema, updateResumeSchema } from './resumes.schemas';
 
 function tokenQueryToAuthHeader(request: Request, _response: Response, next: NextFunction) {
@@ -21,6 +22,7 @@ export const resumesRouter = Router();
 resumesRouter.post(
   '/',
   authenticateAccessToken,
+  createResumeRateLimit,
   validateRequest({ body: createResumeSchema }),
   resumeController.createResume,
 );
@@ -50,6 +52,7 @@ resumesRouter.get(
 resumesRouter.patch(
   '/:id',
   authenticateAccessToken,
+  updateResumeRateLimit,
   validateRequest({ params: resumeParamsSchema, body: updateResumeSchema }),
   resumeController.updateResume,
 );

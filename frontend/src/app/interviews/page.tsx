@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
@@ -59,8 +61,8 @@ export default function InterviewsPage() {
       <AppShell>
         <PageShell
           eyebrow="Interviews"
-          title="Generate interview questions"
-          description="Create AI-powered interview questions based on match results"
+          title={user?.role === 'RECRUITER' ? 'Generate interview questions' : 'Interview Preparation'}
+          description={user?.role === 'RECRUITER' ? 'Create AI-powered interview questions based on match results' : 'Review AI-generated questions to prepare for your interviews'}
         >
           {!matches || matches.items.length === 0 ? (
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
@@ -77,17 +79,28 @@ export default function InterviewsPage() {
                     <div>
                       <div className="flex items-center gap-3">
                         <h3 className="font-medium text-[var(--foreground)]">
-                          {match.jobPosting?.title ?? 'Unknown Job'}
+                          {user?.role === 'RECRUITER'
+                            ? (match.resume?.title ?? 'Unknown Resume')
+                            : (match.jobPosting?.title ?? 'Unknown Job')}
                         </h3>
                         <span className="inline-flex items-center rounded-full bg-[var(--accent)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
                           {match.score}%
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        {match.resume?.title ?? 'Unknown Resume'}
+                        {user?.role === 'RECRUITER'
+                          ? (match.jobPosting?.title ?? 'Unknown Job')
+                          : (match.resume?.title ?? 'Unknown Resume')}
                       </p>
                     </div>
-                    {user?.role === 'RECRUITER' && (
+                    {match.questionSets && match.questionSets.length > 0 ? (
+                      <Link
+                        href={`/interviews/${match.questionSets[0]?.id}`}
+                        className="rounded-lg bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20"
+                      >
+                        View Questions
+                      </Link>
+                    ) : user?.role === 'RECRUITER' ? (
                       <button
                         type="button"
                         onClick={() => handleGenerate(match.id).catch(() => {})}
@@ -96,7 +109,7 @@ export default function InterviewsPage() {
                       >
                         {generatingFor === match.id ? 'Generating...' : 'Generate Questions'}
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}

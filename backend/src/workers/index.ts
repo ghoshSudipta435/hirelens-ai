@@ -25,32 +25,42 @@ export async function processResumeParse(job: Job<ResumeParseJobData>): Promise<
   logger.info({ resumeId, jobId: job.id }, 'Processing resume parse job');
 
   try {
+    const { cloudinaryStorage } = await import('../providers/storage/cloudinary.storage');
     const { prisma } = await import('../config/prisma');
-    const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+    const resume = await prisma.resume.findUnique({
+      where: { id: resumeId },
+      include: { uploadedFile: true },
+    });
+
     if (!resume) {
       logger.warn({ resumeId }, 'Resume not found, skipping parse job');
       return;
     }
 
+    if (!resume.uploadedFile) {
+      logger.warn({ resumeId }, 'No uploaded file associated with resume, skipping parse job');
+      return;
+    }
+
     const parser = await providers.getParser();
-    const ai = await providers.getAI();
+    const fileBuffer = await cloudinaryStorage.downloadFile({ url: resume.uploadedFile.fileUrl });
+    const mimeType = resume.uploadedFile.fileType;
+    const parsed = await parser.parse(fileBuffer, mimeType);
 
-    const rawText = (resume as unknown as { rawText?: string }).rawText ?? '';
-    const parsed = await parser.parse(Buffer.from(rawText), 'text/plain');
-    const skills = await ai.extractSkillsFromText(rawText);
-
-    await prisma.resume.update({
-      where: { id: resumeId },
-      data: {
-        parsedData: {
-          rawText,
-          sections: parsed.summary,
-          skills,
-          experience: parsed.experience,
-          education: parsed.education,
+    if (parsed.rawText.length > 0) {
+      await prisma.resume.update({
+        where: { id: resumeId },
+        data: {
+          parsedData: {
+            rawText: parsed.rawText,
+            skills: parsed.skills,
+            experience: parsed.experience,
+            education: parsed.education,
+            summary: parsed.summary,
+          },
         },
-      },
-    });
+      });
+    }
 
     logger.info({ resumeId, jobId: job.id }, 'Resume parse job completed');
   } catch (error) {
@@ -135,9 +145,14 @@ export async function processInterviewGeneration(job: Job<InterviewGenerateJobDa
       strengths: match.strengths,
     });
 
-    const questionSet = await prisma.interviewQuestionSet.create({
-      data: { matchResultId },
-    });
+    let questionSet = await prisma.interviewQuestionSet.findFirst({ where: { matchResultId } });
+    if (!questionSet) {
+      questionSet = await prisma.interviewQuestionSet.create({
+        data: { matchResultId },
+      });
+    }
+
+    await prisma.interviewQuestion.deleteMany({ where: { questionSetId: questionSet.id } });
 
     const createdQuestions = await prisma.interviewQuestion.createMany({
       data: result.questions.map((q) => ({
@@ -153,6 +168,14 @@ export async function processInterviewGeneration(job: Job<InterviewGenerateJobDa
     logger.error({ err: error, matchResultId, jobId: job.id }, 'Interview generation job failed');
     throw error;
   }
+}
+
+export async function stopWorkers(): Promise<void> {
+  const { getQueueManager } = await import('../providers/queue');
+  const manager = await getQueueManager();
+  if (!manager) return;
+  await manager.close();
+  logger.info('Background workers stopped');
 }
 
 export async function startWorkers(): Promise<void> {

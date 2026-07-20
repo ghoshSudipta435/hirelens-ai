@@ -60,12 +60,16 @@ let refreshPromise: Promise<AuthSession> | null = null;
 export function performRefresh(): Promise<AuthSession> {
   if (!refreshPromise) {
     const storedRefreshToken = useAuthStore.getState().refreshToken;
+    const body = storedRefreshToken ? { refreshToken: storedRefreshToken } : {};
 
     refreshPromise = apiClient
-      .post<ApiSuccessResponse<AuthSession>>('/auth/refresh', {
-        refreshToken: storedRefreshToken,
+      .post<ApiSuccessResponse<AuthSession>>('/auth/refresh', body)
+      .then((response) => {
+        if (response.status === 204) {
+          throw new Error('No session');
+        }
+        return response.data.data;
       })
-      .then((response) => response.data.data)
       .finally(() => {
         refreshPromise = null;
       });
@@ -100,9 +104,8 @@ function setupInterceptors(client: typeof apiClient) {
         return Promise.reject(error);
       }
 
-      // Don't retry refresh itself — prevents infinite loops
-      if (originalRequest.url === '/auth/refresh') {
-        useAuthStore.getState().clearSession();
+      // Don't retry refresh itself, or login/register requests
+      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login' || originalRequest.url === '/auth/register') {
         return Promise.reject(error);
       }
 
@@ -116,7 +119,13 @@ function setupInterceptors(client: typeof apiClient) {
 
         return client(originalRequest);
       } catch (refreshError) {
-        useAuthStore.getState().clearSession();
+        // Only clear session if refresh failed with 401 (invalid/expired token).
+        // On 503/502/504 (DB down), keep the session so the user isn't logged out
+        // during temporary outages like Neon free-tier DB wake-up.
+        const refreshStatus = (refreshError as AxiosError).response?.status;
+        if (refreshStatus === 401 || refreshStatus === 403) {
+          useAuthStore.getState().clearSession();
+        }
         return Promise.reject(refreshError);
       }
     },

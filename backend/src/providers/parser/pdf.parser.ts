@@ -15,7 +15,6 @@ export class PDFResumeParser implements ResumeParser {
         const result = await pdf.getText() as { text?: string };
         text = result.text ?? '';
       } catch {
-        // PDF parsing failed; try to extract readable ASCII text as fallback
         const ascii = buffer.toString('latin1');
         const readable = ascii.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s{3,}/g, ' ').trim();
         if (readable.length > 50) {
@@ -24,6 +23,14 @@ export class PDFResumeParser implements ResumeParser {
       }
     } else if (mimeType === 'text/plain') {
       text = buffer.toString('utf-8');
+    } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      try {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value ?? '';
+      } catch {
+        text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').trim();
+      }
     } else {
       text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ').trim();
     }

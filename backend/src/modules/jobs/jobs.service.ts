@@ -1,7 +1,9 @@
 import { Prisma, type PrismaClient, type EmploymentType, JobPostingStatus, type LocationMode } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
+import { logger } from '../../config/logger';
 import { prisma } from '../../config/prisma';
+import { jobCache } from '../../providers/cache/keys';
 import { providers } from '../../config/providers';
 import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
@@ -30,12 +32,19 @@ export class JobService {
       },
     });
 
-    this.extractAndUpdateSkills(job.id, data.description).catch(() => {});
+    jobCache.invalidateList().catch(() => {});
+
+    this.extractAndUpdateSkills(job.id, data.description).catch((err) => {
+      logger.warn({ err, jobId: job.id }, 'Job skill extraction failed');
+    });
 
     return job;
   }
 
   async getJob(jobId: string) {
+    const cached = await jobCache.get(jobId);
+    if (cached) return cached;
+
     const job = await this.prismaClient.jobPosting.findUnique({
       where: { id: jobId },
       include: {
@@ -49,11 +58,17 @@ export class JobService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
     }
 
+    jobCache.set(jobId, job).catch(() => {});
+
     return job;
   }
 
   async listJobs(query: JobPostingListQuery): Promise<PaginatedResponse<unknown>> {
     const { page, limit, skip } = parsePagination(query);
+
+    const filterKey = JSON.stringify({ status: query.status, search: query.search, employmentType: query.employmentType, locationMode: query.locationMode, page, limit });
+    const cached = await jobCache.get(`list:${filterKey}`);
+    if (cached) return cached as PaginatedResponse<unknown>;
 
     const where: Prisma.JobPostingWhereInput = {
       deletedAt: null,
@@ -93,7 +108,10 @@ export class JobService {
       this.prismaClient.jobPosting.count({ where }),
     ]);
 
-    return buildPaginatedResponse(items, total, page, limit);
+    const result = buildPaginatedResponse(items, total, page, limit);
+    jobCache.set(`list:${filterKey}`, result).catch(() => {});
+
+    return result;
   }
 
   async updateJob(recruiterId: string, jobId: string, data: UpdateJobInputDto) {
@@ -122,8 +140,12 @@ export class JobService {
     });
 
     if (data.description !== undefined) {
-      this.extractAndUpdateSkills(jobId, data.description).catch(() => {});
+      this.extractAndUpdateSkills(jobId, data.description).catch((err) => {
+        logger.warn({ err, jobId }, 'Job skill re-extraction failed');
+      });
     }
+
+    jobCache.invalidate(jobId).catch(() => {});
 
     return updated;
   }
@@ -141,6 +163,8 @@ export class JobService {
       where: { id: jobId },
       data: { deletedAt: new Date() },
     });
+
+    jobCache.invalidate(jobId).catch(() => {});
 
     return { jobId };
   }
