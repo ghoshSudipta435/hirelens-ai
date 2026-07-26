@@ -2,46 +2,14 @@ const { execSync } = require('child_process');
 
 function runDeploy() {
   try {
-    console.log('Running prisma migrate deploy...');
-    execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', { stdio: 'pipe', encoding: 'utf-8' });
-    console.log('Migrations deployed successfully!');
+    console.log('Running prisma db push to sync schema...');
+    execSync('npx prisma db push --schema=prisma/schema.prisma --accept-data-loss', { stdio: 'inherit' });
+    console.log('Database synced successfully!');
     return true;
   } catch (error) {
-    const output = error.stdout + '\n' + error.stderr;
-    console.error('Deploy failed with output:\n', output);
-
-    const matchName = output.match(/Migration name: (\S+)/);
-    const isAlreadyExists = output.includes('already exists');
-    
-    // Also handle P3009: The `migration_name` migration started at ... failed
-    const failedMatch = output.match(/The `([^`]+)` migration started/);
-
-    if ((matchName && isAlreadyExists) || failedMatch) {
-      const migrationName = (matchName && matchName[1]) || (failedMatch && failedMatch[1]);
-      console.log(`\nDetected that migration ${migrationName} actually exists in the database. Resolving as applied...`);
-      try {
-        execSync(`npx prisma migrate resolve --applied ${migrationName} --schema=prisma/schema.prisma`, { stdio: 'inherit' });
-        console.log(`Successfully resolved ${migrationName}. Retrying deploy...`);
-        return false; // Return false to indicate we should retry
-      } catch (resolveError) {
-        console.error(`Failed to resolve migration ${migrationName}`);
-        process.exit(1);
-      }
-    } else {
-      console.error('An unrecoverable migration error occurred.');
-      process.exit(1);
-    }
+    console.error('Failed to sync database:', error);
+    process.exit(1);
   }
 }
 
-let success = false;
-let attempts = 0;
-while (!success && attempts < 10) {
-  attempts++;
-  success = runDeploy();
-}
-
-if (!success) {
-  console.error('Failed to deploy migrations after 10 attempts.');
-  process.exit(1);
-}
+runDeploy();
