@@ -114,8 +114,8 @@ export function errorHandler(
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred',
-      details: [],
+      message: error.message || 'An unexpected error occurred',
+      details: error.stack ? [error.stack] : [],
     },
   });
 }
