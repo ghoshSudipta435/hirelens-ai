@@ -142,11 +142,11 @@ export function MatchesPage() {
             <option value="company">Company Name (A-Z)</option>
           </select>
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <select 
             value={employmentType} 
             onChange={(e) => setEmploymentType(e.target.value)}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[120px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[120px]"
           >
             <option value="">All Employment</option>
             <option value="FULL_TIME">Full Time</option>
@@ -157,7 +157,7 @@ export function MatchesPage() {
           <select 
             value={locationMode} 
             onChange={(e) => setLocationMode(e.target.value)}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[120px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[120px]"
           >
             <option value="">All Locations</option>
             <option value="REMOTE">Remote</option>
@@ -169,7 +169,7 @@ export function MatchesPage() {
             placeholder="Min Salary (e.g. 50000)"
             value={salaryMin}
             onChange={(e) => setSalaryMin(e.target.value ? Number(e.target.value) : '')}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[140px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[140px]"
           />
         </div>
       </div>

@@ -8,19 +8,21 @@ import { ThemeToggle } from '../ui/theme-toggle';
 import { NotificationBell } from '../ui/notification-bell';
 import { ProfileMenu } from '../ui/profile-menu';
 
+import { LayoutDashboard, FileText, Briefcase, FileSignature, Sparkles, ShieldAlert } from 'lucide-react';
+
 const studentLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/resumes', label: 'Resumes' },
-  { href: '/jobs', label: 'Jobs' },
-  { href: '/applications', label: 'Applications' },
-  { href: '/matches', label: 'Matches' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/resumes', label: 'Resumes', icon: FileText },
+  { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/applications', label: 'Applications', icon: FileSignature },
+  { href: '/matches', label: 'Matches', icon: Sparkles },
 ];
 
 const recruiterLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/jobs', label: 'Jobs' },
-  { href: '/applications', label: 'Applications' },
-  { href: '/interviews', label: 'Interviews' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/applications', label: 'Applications', icon: FileSignature },
+  { href: '/interviews', label: 'Interviews', icon: FileText },
 ];
 
 export function NavBar() {
@@ -30,7 +32,7 @@ export function NavBar() {
   const links = useMemo(() => {
     const baseLinks = user?.role === 'RECRUITER' ? recruiterLinks : studentLinks;
     if (user?.role === 'ADMIN') {
-       return [...baseLinks, { href: '/admin', label: 'Admin' }];
+       return [...baseLinks, { href: '/admin', label: 'Admin', icon: ShieldAlert }];
     }
     return baseLinks;
   }, [user?.role]);
@@ -68,25 +70,32 @@ export function NavBar() {
         </div>
       </div>
       {/* Mobile nav (Bottom Bar) */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-background/90 backdrop-blur-md px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`flex flex-col items-center justify-center rounded-lg px-2 py-1 transition-all duration-200 ${
-              pathname.startsWith(link.href)
-                ? 'text-accent scale-105'
-                : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <span className={`text-[11px] tracking-wide ${pathname.startsWith(link.href) ? 'font-bold' : 'font-medium'}`}>
-              {link.label}
-            </span>
-            {pathname.startsWith(link.href) && (
-              <span className="mt-1 block h-1 w-1 rounded-full bg-accent" />
-            )}
-          </Link>
-        ))}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-background/90 backdrop-blur-md px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
+        {links.map((link) => {
+          const Icon = link.icon;
+          const isActive = pathname.startsWith(link.href);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex flex-col items-center justify-center flex-1 min-w-0 rounded-lg px-1 py-1.5 transition-all duration-200 ${
+                isActive
+                  ? 'text-accent scale-105'
+                  : 'text-muted hover:text-foreground hover:bg-surface-hover'
+              }`}
+            >
+              <div className="relative flex items-center justify-center h-6 mb-1">
+                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+                {isActive && (
+                  <span className="absolute -bottom-1 block h-1 w-1 rounded-full bg-accent" />
+                )}
+              </div>
+              <span className={`text-[10px] sm:text-[11px] truncate w-full text-center tracking-wide ${isActive ? 'font-bold' : 'font-medium'}`}>
+                {link.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

@@ -52,8 +52,8 @@ export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps)
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-4xl rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40"
-      style={{ height: '85vh' }}
+      className="w-[95vw] max-w-4xl rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40 sm:w-full"
+      style={{ height: '85dvh', maxHeight: '90dvh' }}
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}

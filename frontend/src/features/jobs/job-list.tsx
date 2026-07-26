@@ -94,11 +94,11 @@ export function JobList() {
             <option value="company_name">Company Name (A-Z)</option>
           </select>
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <select 
             value={employmentType} 
             onChange={(e) => { setEmploymentType(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[120px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[120px]"
           >
             <option value="">All Employment</option>
             <option value="FULL_TIME">Full Time</option>
@@ -109,7 +109,7 @@ export function JobList() {
           <select 
             value={locationMode} 
             onChange={(e) => { setLocationMode(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[120px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[120px]"
           >
             <option value="">All Locations</option>
             <option value="REMOTE">Remote</option>
@@ -119,7 +119,7 @@ export function JobList() {
           <select 
             value={category} 
             onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[120px]"
+            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full sm:flex-1 sm:w-auto sm:min-w-[120px]"
           >
             <option value="">All Categories</option>
             <option value="Engineering">Engineering</option>
@@ -128,20 +128,22 @@ export function JobList() {
             <option value="Marketing">Marketing</option>
             <option value="Sales">Sales</option>
           </select>
-          <input
-            type="number"
-            placeholder="Min Salary (e.g. 50000)"
-            value={salaryMin}
-            onChange={(e) => { setSalaryMin(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[140px]"
-          />
-          <input
-            type="number"
-            placeholder="Max Experience (Yrs)"
-            value={experienceYears}
-            onChange={(e) => { setExperienceYears(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent flex-1 min-w-[140px]"
-          />
+          <div className="flex w-full sm:flex-1 sm:w-auto gap-4">
+            <input
+              type="number"
+              placeholder="Min Salary"
+              value={salaryMin}
+              onChange={(e) => { setSalaryMin(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
+              className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full min-w-0"
+            />
+            <input
+              type="number"
+              placeholder="Max Exp (Yrs)"
+              value={experienceYears}
+              onChange={(e) => { setExperienceYears(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
+              className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent w-full min-w-0"
+            />
+          </div>
         </div>
       </div>
 

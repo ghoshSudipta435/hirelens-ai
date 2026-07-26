@@ -55,7 +55,7 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40"
+      className="w-[95vw] max-w-md rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40 sm:w-full"
       onClick={(e) => {
         if (e.target === dialogRef.current) onCancel();
       }}
