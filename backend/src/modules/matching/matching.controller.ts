@@ -58,4 +58,43 @@ export class MatchingController {
       next(error);
     }
   };
+
+  getAutoMatchStatus = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const { prisma } = await import('../../config/prisma');
+      const userId = request.auth!.userId;
+
+      const results = await prisma.matchResult.groupBy({
+        by: ['status'],
+        where: {
+          resume: { ownerId: userId, deletedAt: null },
+          contextType: 'AUTO_MATCH',
+          deletedAt: null,
+        },
+        _count: {
+          status: true,
+        },
+      });
+
+      const statusCounts = results.reduce((acc, curr) => {
+        acc[curr.status] = curr._count.status;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+      const completed = (statusCounts['COMPLETED'] || 0) + (statusCounts['FAILED'] || 0);
+
+      response.status(StatusCodes.OK).json({
+        success: true,
+        data: {
+          total,
+          completed,
+          pending: statusCounts['PENDING'] || 0,
+          failed: statusCounts['FAILED'] || 0,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

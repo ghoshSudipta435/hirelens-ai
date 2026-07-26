@@ -6,8 +6,8 @@ type LoadingStateProps = Readonly<{
 
 export function LoadingState({ label = 'Loading' }: LoadingStateProps) {
   return (
-    <div className="flex min-h-40 items-center justify-center gap-3 text-sm text-[var(--muted)]">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+    <div className="flex min-h-40 items-center justify-center gap-3 text-sm text-muted">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-[var(--accent)]" />
       <span>{label}</span>
     </div>
   );

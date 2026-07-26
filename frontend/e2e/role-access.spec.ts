@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 test.describe('Role-Based Access Control', () => {
-  async function registerAs(page: any, role: string) {
+  async function registerAs(page: Page, role: string) {
     await page.goto('/register');
     await page.fill('#name', `Test ${role}`);
     await page.fill('#email', `test-${role.toLowerCase()}-${Date.now()}@test.com`);

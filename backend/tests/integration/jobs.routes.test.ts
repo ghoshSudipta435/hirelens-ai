@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmploymentType, JobPostingStatus, LocationMode } from '@prisma/client';
 import { createPrismaMock } from '../fixtures/create-prisma-mock';
 
@@ -7,6 +7,7 @@ const prismaFixture = createPrismaMock();
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
+  prismaRead: prismaFixture.prismaMock,
 }));
 
 vi.mock('../../src/config/providers', () => ({
@@ -16,12 +17,16 @@ vi.mock('../../src/config/providers', () => ({
       generateMatchScore: vi.fn(),
       generateInterviewQuestions: vi.fn(),
     }),
+    getEmail: vi.fn().mockResolvedValue({ send: vi.fn().mockResolvedValue(true) }),
   },
 }));
+
+const ORIGINAL_REDIS_URL = process.env.REDIS_URL;
 
 describe('jobs routes', () => {
   beforeEach(() => {
     vi.resetModules();
+    delete process.env.REDIS_URL;
     prismaFixture.state.users.length = 0;
     prismaFixture.state.jobPostings.length = 0;
     process.env.NODE_ENV = 'test';
@@ -29,6 +34,14 @@ describe('jobs routes', () => {
     process.env.JWT_SECRET = 'test-access-secret-with-at-least-32-characters';
     process.env.JWT_EXPIRES_IN = '15m';
     process.env.LOG_LEVEL = 'silent';
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_REDIS_URL === undefined) {
+      delete process.env.REDIS_URL;
+    } else {
+      process.env.REDIS_URL = ORIGINAL_REDIS_URL;
+    }
   });
 
   async function registerUser(app: any, role: string) {
@@ -89,6 +102,8 @@ describe('jobs routes', () => {
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(deleteRes.status).toBe(200);
+
+    await new Promise(r => setTimeout(r, 50));
 
     const getAfterDeleteRes = await request(app)
       .get(`/api/v1/jobs/${jobId}`)

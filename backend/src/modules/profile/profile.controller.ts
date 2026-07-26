@@ -41,6 +41,22 @@ export class ProfileController {
     }
   };
 
+  updateAvatar = async (request: ProfileRequest, response: Response, next: NextFunction) => {
+    try {
+      const result = await this.profileService.updateAvatar(
+        request.auth!.userId,
+        request.body.avatarUrl,
+      );
+
+      response.status(StatusCodes.OK).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getProfileByUserId = async (
     request: ProfileParamsRequest,
     response: Response,

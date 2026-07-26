@@ -17,7 +17,7 @@ export default function ResumesPage() {
           <div className="mb-6 flex justify-end">
             <Link
               href="/resumes/new"
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
             >
               Create Resume
             </Link>

@@ -50,24 +50,24 @@ export function ConfirmDialog({
   const confirmStyles =
     variant === 'danger'
       ? 'bg-red-600 text-white hover:bg-red-700'
-      : 'bg-[var(--accent)] text-white hover:opacity-90';
+      : 'bg-accent text-white hover:opacity-90';
 
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-0 shadow-xl backdrop:bg-black/40"
+      className="rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40"
       onClick={(e) => {
         if (e.target === dialogRef.current) onCancel();
       }}
     >
       <div className="p-6">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">{message}</p>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 text-sm text-muted">{message}</p>
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--background)]"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
           >
             {cancelLabel}
           </button>

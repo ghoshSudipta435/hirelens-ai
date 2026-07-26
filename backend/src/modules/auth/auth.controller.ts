@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import { logger } from '../../config/logger';
+import { providers } from '../../config/providers';
 import { ApiError } from '../../utils/api-error';
 import { AuthAuditService } from './auth.audit.service';
 import {
@@ -51,6 +52,14 @@ export class AuthController {
         ipAddress: request.ip,
         userAgent: request.get('user-agent'),
       });
+
+      providers.getEmail().then((email) => {
+        if (!email) return;
+        const template = result.user.role === 'STUDENT' ? 'welcome-student' : 'welcome-recruiter';
+        email.send(template, result.user.email, { name: result.user.name }).catch((err) => {
+          logger.warn({ err, userId: result.user.id }, 'Failed to send welcome email');
+        });
+      }).catch(() => {});
 
       response.status(StatusCodes.CREATED).json({
         success: true,

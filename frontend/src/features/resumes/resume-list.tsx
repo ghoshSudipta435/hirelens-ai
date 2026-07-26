@@ -73,7 +73,7 @@ export function ResumeList() {
 
   if (resumes.length === 0) {
     return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
+      <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">
         No resumes yet. Upload your first resume to get started.
       </div>
     );
@@ -84,11 +84,11 @@ export function ResumeList() {
       {resumes.map((resume) => (
         <div
           key={resume.id}
-          className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm"
+          className="flex items-center justify-between rounded-lg border border-border bg-surface p-4 shadow-sm"
         >
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium text-[var(--foreground)]">{resume.title}</h3>
+              <h3 className="font-medium text-foreground">{resume.title}</h3>
               {resume.status === 'ACTIVE' && (
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                   Active
@@ -100,7 +100,7 @@ export function ResumeList() {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-[var(--muted)]">
+            <p className="mt-1 text-xs text-muted">
               Version {resume.version} &middot; {new Date(resume.createdAt).toLocaleDateString()}
             </p>
           </div>
@@ -109,7 +109,7 @@ export function ResumeList() {
               <button
                 type="button"
                 onClick={() => setViewTarget(resume.id)}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10"
               >
                 View
               </button>
@@ -118,7 +118,7 @@ export function ResumeList() {
               href={`${appEnv.apiBaseUrl}/resumes/${resume.id}/file?download=true&token=${accessToken}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10"
             >
               Download
             </a>
@@ -126,7 +126,7 @@ export function ResumeList() {
               <button
                 type="button"
                 onClick={() => handleActivate(resume)}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10"
               >
                 Activate
               </button>

@@ -12,6 +12,7 @@ const cloudinaryStorageMock = vi.hoisted(() => ({
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
+  prismaRead: prismaFixture.prismaMock,
 }));
 
 vi.mock('../../src/providers/storage/cloudinary.storage', () => ({

@@ -28,6 +28,13 @@ export const jobListQuerySchema = z.object({
   search: z.string().optional(),
   employmentType: z.nativeEnum(EmploymentType).optional(),
   locationMode: z.nativeEnum(LocationMode).optional(),
+  company: z.string().optional(),
+  experienceYears: z.coerce.number().int().min(0).optional(),
+  salaryMin: z.coerce.number().int().min(0).optional(),
+  salaryMax: z.coerce.number().int().min(0).optional(),
+  skills: z.string().optional(), // Comma separated skills
+  category: z.string().optional(),
+  sort: z.string().optional(),
 });
 
 export type CreateJobInputDto = z.infer<typeof createJobSchema>;

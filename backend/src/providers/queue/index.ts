@@ -16,14 +16,38 @@ function getConnection(): any {
     connection = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      retryStrategy(times: number) {
+        // Exponential backoff with a max of 3 seconds
+        return Math.min(times * 100, 3000);
+      },
+      reconnectOnError(err: Error) {
+        return err.message.includes('READONLY');
+      },
     });
     connection.on('error', (err: Error) => {
       logger.error({ err }, 'Redis connection error');
+    });
+    connection.on('connect', () => {
+      logger.info('Redis connected successfully');
+    });
+    connection.on('reconnecting', () => {
+      logger.warn('Redis reconnecting...');
     });
   }
   return connection;
 }
 
+export async function pingRedis(): Promise<boolean> {
+  if (!env.REDIS_URL) return false;
+  try {
+    const conn = getConnection();
+    const result = await conn.ping();
+    return result === 'PONG';
+  } catch (error) {
+    logger.error({ error }, 'Redis ping failed');
+    return false;
+  }
+}
 export interface QueueJobData {
   [key: string]: unknown;
 }
@@ -59,7 +83,17 @@ export async function getQueueManager(): Promise<QueueManager | null> {
       processor: (job: Job<T>) => Promise<void>,
       opts?: Partial<WorkerOptions>
     ): Worker {
-      return new BullMQWorker(name, processor as any, { connection: conn, ...opts });
+      const worker = new BullMQWorker(name, processor as any, { connection: conn, ...opts });
+      
+      worker.on('failed', (job: Job | undefined, err: Error) => {
+        logger.error({ jobId: job?.id, queueName: name, err: err.message }, 'BullMQ Job failed');
+      });
+      
+      worker.on('error', (err: Error) => {
+        logger.error({ queueName: name, err: err.message }, 'BullMQ Worker error');
+      });
+
+      return worker;
     },
     async close() {
       await conn.quit();
@@ -77,7 +111,32 @@ export async function addJob<T = QueueJobData>(
   opts?: { delay?: number; attempts?: number; priority?: number }
 ): Promise<Job<T> | null> {
   const manager = await getQueueManager();
-  if (!manager) return null;
+  if (!manager) {
+    logger.warn({ queueName }, 'Redis not configured, executing job synchronously');
+    // Inline execution fallback
+    try {
+      const workers = await import('../../workers');
+      const mockJob = { data, id: 'sync-' + Date.now() } as unknown as Job<T>;
+      
+      switch (queueName) {
+        case 'resume-parse':
+          workers.processResumeParse(mockJob as any).catch(e => logger.error({err:e}, 'Sync job failed'));
+          break;
+        case 'match-score':
+          workers.processMatchScore(mockJob as any).catch(e => logger.error({err:e}, 'Sync job failed'));
+          break;
+        case 'interview-generate':
+          workers.processInterviewGeneration(mockJob as any).catch(e => logger.error({err:e}, 'Sync job failed'));
+          break;
+        case 'auto-match-generation':
+          workers.processAutoMatchGeneration(mockJob as any).catch(e => logger.error({err:e}, 'Sync job failed'));
+          break;
+      }
+    } catch (err) {
+      logger.error({ err }, 'Failed to execute job synchronously');
+    }
+    return null;
+  }
 
   const queue = manager.getQueue(queueName);
   const job = await queue.add(queueName, data as object, {

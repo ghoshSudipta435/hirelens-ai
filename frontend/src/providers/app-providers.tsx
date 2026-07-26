@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -49,9 +50,11 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SessionBootstrap />
-        {children}
-        <ToastViewport />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <SessionBootstrap />
+          {children}
+          <ToastViewport />
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

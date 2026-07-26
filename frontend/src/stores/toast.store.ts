@@ -23,7 +23,9 @@ type ToastState = {
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   pushToast: (toast) => {
-    const id = crypto.randomUUID();
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
     set((state) => ({
       toasts: [...state.toasts, { ...toast, id }],
     }));

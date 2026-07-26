@@ -12,6 +12,10 @@ const envSchema = z
     DATABASE_URL: z
       .string()
       .regex(/^postgres(?:ql)?:\/\/.+/i, 'DATABASE_URL must be a PostgreSQL connection string'),
+    READ_DATABASE_URL: z
+      .string()
+      .regex(/^postgres(?:ql)?:\/\/.+/i, 'READ_DATABASE_URL must be a PostgreSQL connection string')
+      .optional(),
     DIRECT_URL: z
       .string()
       .regex(/^postgres(?:ql)?:\/\/.+/i, 'DIRECT_URL must be a PostgreSQL connection string'),

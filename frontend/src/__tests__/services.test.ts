@@ -10,6 +10,9 @@ vi.mock('@/lib/api/http-client', () => {
       patch: vi.fn().mockResolvedValue(mockResponse({ id: '1', title: 'Updated' })),
       delete: vi.fn().mockResolvedValue({}),
     },
+    aiApiClient: {
+      post: vi.fn().mockResolvedValue(mockResponse({ id: '1', title: 'Test' })),
+    },
   };
 });
 

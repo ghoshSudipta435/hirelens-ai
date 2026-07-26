@@ -20,6 +20,13 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
 
+export const prismaRead = env.READ_DATABASE_URL 
+  ? new PrismaClient({
+      ...(isNeon && { adapter: new PrismaNeon({ connectionString: env.READ_DATABASE_URL }) }),
+      log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    })
+  : prisma;
+
 if (process.env.NODE_ENV !== 'production') {
   globalThis.__prisma__ = prisma;
 }

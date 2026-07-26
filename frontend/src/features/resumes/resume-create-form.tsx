@@ -31,22 +31,22 @@ export function ResumeCreateForm({ onSuccess }: ResumeCreateFormProps) {
     <div className="space-y-6">
       {!uploadedFile ? (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Upload Resume</label>
+          <label className="mb-2 block text-sm font-medium text-foreground">Upload Resume</label>
           <UploadForm
             onUploadComplete={setUploadedFile}
           />
         </div>
       ) : (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--foreground)]">{uploadedFile.fileName}</p>
-              <p className="text-xs text-[var(--muted)]">Uploaded successfully</p>
+              <p className="text-sm font-medium text-foreground">{uploadedFile.fileName}</p>
+              <p className="text-xs text-muted">Uploaded successfully</p>
             </div>
             <button
               type="button"
               onClick={() => setUploadedFile(null)}
-              className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)]"
+              className="text-xs text-muted underline hover:text-foreground"
             >
               Change
             </button>
@@ -56,11 +56,11 @@ export function ResumeCreateForm({ onSuccess }: ResumeCreateFormProps) {
 
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="title">
+          <label className="block text-sm font-medium text-foreground" htmlFor="title">
             Resume Title
           </label>
           <input
-            className="mt-2 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+            className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
             id="title"
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Software Engineer Resume 2026"

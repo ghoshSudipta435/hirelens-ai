@@ -1,16 +1,19 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 enum UserRole {
   STUDENT
   RECRUITER
+  ADMIN
 }
 
 enum ResumeStatus {
@@ -48,6 +51,13 @@ enum ApplicationStatus {
 enum MatchContextType {
   APPLICATION
   PREVIEW
+  AUTO_MATCH
+}
+
+enum MatchStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }
 
 enum QuestionDifficulty {
@@ -82,6 +92,7 @@ model User {
   email          String       @unique
   passwordHash   String
   role           UserRole
+  avatarUrl      String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   resumes         Resume[]
@@ -130,6 +141,7 @@ model Resume {
   version         Int
   status          ResumeStatus   @default(DRAFT)
   parsedData      Json?
+  embedding       Unsupported("vector(1536)")?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
@@ -151,6 +163,11 @@ model JobPosting {
   employmentType  EmploymentType
   locationMode    LocationMode
   status          JobPostingStatus @default(DRAFT)
+  salaryMin       Int?
+  salaryMax       Int?
+  experienceYears Int?
+  category        String?
+  embedding       Unsupported("vector(1536)")?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
@@ -161,6 +178,7 @@ model JobPosting {
   @@index([recruiterId, status])
   @@index([status, createdAt])
   @@index([employmentType, locationMode])
+  @@index([category])
 }
 
 model Application {
@@ -193,6 +211,7 @@ model MatchResult {
   missingSkills     String[]
   strengths         String[]
   scoreVersion      String
+  status            MatchStatus      @default(COMPLETED)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime          @updatedAt
   deletedAt         DateTime?

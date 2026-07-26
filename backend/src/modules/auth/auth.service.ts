@@ -7,6 +7,8 @@ import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import type { AuthResponse, PublicUser } from './auth.types';
 import { toPublicUser } from './auth.types';
+import { eventBus } from '../../providers/events';
+import { logger } from '../../config/logger';
 
 type RegisterInput = {
   name: string;
@@ -210,6 +212,13 @@ export class AuthService {
       });
     }
 
+    eventBus.publish('USER_REGISTERED', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString(),
+    }).catch(err => logger.error({ err }, 'Failed to publish USER_REGISTERED event'));
+
     return this.issueTokensForUser(user);
   }
 
@@ -232,6 +241,13 @@ export class AuthService {
     if (!isPasswordValid) {
       throw this.invalidCredentialsError();
     }
+
+    eventBus.publish('USER_LOGGED_IN', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString(),
+    }).catch(err => logger.error({ err }, 'Failed to publish USER_LOGGED_IN event'));
 
     return this.issueTokensForUser(user);
   }

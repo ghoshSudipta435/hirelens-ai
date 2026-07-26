@@ -33,7 +33,7 @@ export function Field({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor={id}>
+      <label className="block text-sm font-medium text-foreground" htmlFor={id}>
         {label}
       </label>
       <div className="relative mt-2">
@@ -42,7 +42,7 @@ export function Field({
           aria-describedby={error ? errorId : hint ? hintId : undefined}
           aria-invalid={Boolean(error)}
           autoComplete={autoComplete}
-          className="w-full rounded-lg border border-[var(--border)] bg-white pr-10 pl-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+          className="w-full rounded-lg border border-border bg-surface pr-10 pl-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent"
           id={id}
           placeholder={placeholder}
           type={isPassword && showPassword ? 'text' : type}
@@ -51,7 +51,7 @@ export function Field({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             tabIndex={-1}
           >
@@ -69,7 +69,7 @@ export function Field({
         )}
       </div>
       {hint && !error ? (
-        <p className="mt-1 text-xs leading-5 text-[var(--muted)]" id={hintId}>
+        <p className="mt-1 text-xs leading-5 text-muted" id={hintId}>
           {hint}
         </p>
       ) : null}

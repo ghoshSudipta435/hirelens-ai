@@ -58,13 +58,13 @@ export function JobForm() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="employmentType">
+          <label className="block text-sm font-medium text-foreground" htmlFor="employmentType">
             Employment Type
           </label>
           <select
             {...register('employmentType')}
             aria-invalid={Boolean(errors.employmentType)}
-            className="mt-2 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+            className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
             id="employmentType"
           >
             <option value="">Select type</option>
@@ -81,13 +81,13 @@ export function JobForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="locationMode">
+          <label className="block text-sm font-medium text-foreground" htmlFor="locationMode">
             Location Mode
           </label>
           <select
             {...register('locationMode')}
             aria-invalid={Boolean(errors.locationMode)}
-            className="mt-2 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+            className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
             id="locationMode"
           >
             <option value="">Select mode</option>
@@ -104,12 +104,12 @@ export function JobForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="status">
+        <label className="block text-sm font-medium text-foreground" htmlFor="status">
           Status
         </label>
         <select
           {...register('status')}
-          className="mt-2 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+          className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
           id="status"
         >
           <option value="DRAFT">Draft</option>

@@ -12,6 +12,7 @@ import { notFoundHandler } from './middleware/not-found';
 import { sentryErrorHandler } from './middleware/sentry';
 import { apiRouter } from './routes';
 import { sendHealthResponse } from './routes/health.route';
+import { metricsRegistry, httpRequestDurationMicroseconds } from './providers/metrics';
 
 const globalRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -29,19 +30,52 @@ export function createApp() {
 
   app.get('/health', sendHealthResponse);
 
+  app.get('/metrics', async (req, res) => {
+    try {
+      res.set('Content-Type', metricsRegistry.contentType);
+      res.end(await metricsRegistry.metrics());
+    } catch (err) {
+      res.status(500).end(err);
+    }
+  });
+
   app.use(requestLogger);
+
+  app.use((req, res, next) => {
+    if (req.path === '/metrics' || req.path === '/health') {
+      return next();
+    }
+    const end = httpRequestDurationMicroseconds.startTimer();
+    res.on('finish', () => {
+      end({
+        method: req.method,
+        route: req.route?.path || req.path,
+        status_code: res.statusCode,
+      });
+    });
+    next();
+  });
+
   app.use(
     helmet({
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: false,
+      xFrameOptions: false,
     }),
   );
   app.use(
     cors({
       origin: (requestOrigin, callback) => {
         if (env.NODE_ENV !== 'production') {
-          if (!requestOrigin || requestOrigin.startsWith('http://localhost:') || requestOrigin.startsWith('http://127.0.0.1:')) {
+          if (
+            !requestOrigin ||
+            requestOrigin.startsWith('http://localhost:') ||
+            requestOrigin.startsWith('http://127.0.0.1:') ||
+            requestOrigin.startsWith('http://192.168.') ||
+            requestOrigin.startsWith('http://10.') ||
+            requestOrigin.startsWith('http://172.')
+          ) {
             return callback(null, requestOrigin ?? env.CLIENT_ORIGIN);
           }
         }

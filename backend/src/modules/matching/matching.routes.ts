@@ -13,10 +13,17 @@ export const matchingRouter = Router();
 matchingRouter.post(
   '/preview',
   authenticateAccessToken,
-  authorizeRoles('STUDENT'),
+  authorizeRoles('STUDENT', 'ADMIN'),
   matchingRateLimit,
   validateRequest({ body: previewMatchSchema }),
   matchingController.previewMatch,
+);
+
+matchingRouter.get(
+  '/status',
+  authenticateAccessToken,
+  authorizeRoles('STUDENT', 'ADMIN'),
+  matchingController.getAutoMatchStatus,
 );
 
 matchingRouter.get(

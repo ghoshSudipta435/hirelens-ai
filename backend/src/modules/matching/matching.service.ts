@@ -88,17 +88,11 @@ export class MatchingService {
 
     const cachedScore = await aiCache.getMatchScore(data.resumeId, data.jobPostingId);
 
-    let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] };
+    // Generate instant baseline score
+    let matchOutput = computeFallbackMatch(resumeText, job.description, job.extractedSkills);
 
     if (cachedScore) {
       matchOutput = cachedScore as typeof matchOutput;
-    } else {
-      try {
-        matchOutput = await ai.generateMatchScore(matchInput);
-        aiCache.setMatchScore(data.resumeId, data.jobPostingId, matchOutput).catch(() => {});
-      } catch {
-        matchOutput = computeFallbackMatch(resumeText, job.description, job.extractedSkills);
-      }
     }
 
     const matchResult = await this.prismaClient.matchResult.create({
@@ -126,9 +120,37 @@ export class MatchingService {
       resumeId: data.resumeId,
       jobPostingId: data.jobPostingId,
       ownerId: userId,
+    }).then((job) => {
+      if (!job) {
+        // Fallback to synchronous fire-and-forget if Redis is disabled
+        this.enrichMatchWithAi(matchResult.id, matchInput).catch(() => {});
+      }
     });
 
     return matchResult;
+  }
+
+  public async enrichMatchWithAi(matchId: string, matchInput: MatchInput): Promise<void> {
+    const ai = await providers.getAI();
+    try {
+      const matchOutput = await ai.generateMatchScore(matchInput);
+      
+      const updatedMatch = await this.prismaClient.matchResult.update({
+        where: { id: matchId },
+        data: {
+          score: matchOutput.score,
+          matchedSkills: matchOutput.matchedSkills,
+          missingSkills: matchOutput.missingSkills,
+          strengths: matchOutput.strengths,
+          scoreVersion: SCORE_VERSION,
+        },
+      });
+
+      aiCache.setMatchScore(updatedMatch.resumeId, updatedMatch.jobPostingId || '', matchOutput).catch(() => {});
+      matchCache.set(matchId, updatedMatch).catch(() => {});
+    } catch (error) {
+      // Keep baseline score on failure
+    }
   }
 
   async getMatch(matchId: string, userId: string, role: string) {
@@ -162,7 +184,7 @@ export class MatchingService {
   async listMatches(userId: string, role: string, query: MatchListQuery) {
     const { page, limit, skip } = parsePagination(query);
 
-    const filterKey = JSON.stringify({ role, page, limit });
+    const filterKey = JSON.stringify({ role, ...query });
     const cached = await matchCache.getList(userId, filterKey);
     if (cached) return cached;
 
@@ -170,10 +192,85 @@ export class MatchingService {
       deletedAt: null,
     };
 
+    if (query.contextType) {
+      where.contextType = query.contextType;
+    }
+    
+    if (query.minScore !== undefined) {
+      where.score = { gte: query.minScore };
+    }
+
+    const jobPostingWhere: any = { deletedAt: null };
+
+    if (query.company) {
+      const matchingProfiles = await prisma.recruiterProfile.findMany({
+        where: { companyName: { contains: query.company, mode: 'insensitive' } },
+        select: { userId: true },
+      });
+      const recruiterIds = matchingProfiles.map((p) => p.userId);
+      if (recruiterIds.length === 0) {
+        return buildPaginatedResponse([], 0, page, limit);
+      }
+      jobPostingWhere.recruiterId = { in: recruiterIds };
+    }
+    if (query.locationMode) {
+      jobPostingWhere.locationMode = query.locationMode;
+    }
+    if (query.employmentType) {
+      jobPostingWhere.employmentType = query.employmentType;
+    }
+    if (query.category) {
+      jobPostingWhere.category = query.category;
+    }
+    if (query.experienceYears !== undefined) {
+      jobPostingWhere.experienceYears = { lte: query.experienceYears };
+    }
+    if (query.salaryMin !== undefined) {
+      jobPostingWhere.OR = [
+        { salaryMax: { gte: query.salaryMin } },
+        { salaryMin: { gte: query.salaryMin } }
+      ];
+    }
+    if (query.skills) {
+      const skillsArray = query.skills.split(',').map(s => s.trim()).filter(Boolean);
+      if (skillsArray.length > 0) {
+        jobPostingWhere.extractedSkills = { hasSome: skillsArray };
+      }
+    }
+
     if (role === 'STUDENT') {
       where.resume = { ownerId: userId, deletedAt: null };
+      where.jobPosting = Object.keys(jobPostingWhere).length > 1 ? jobPostingWhere : { deletedAt: null };
     } else if (role === 'RECRUITER') {
-      where.jobPosting = { recruiterId: userId, deletedAt: null };
+      jobPostingWhere.recruiterId = userId;
+      where.jobPosting = jobPostingWhere;
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      switch (query.sort) {
+        case 'score_highest':
+          orderBy = { score: 'desc' };
+          break;
+        case 'score_lowest':
+          orderBy = { score: 'asc' };
+          break;
+        case 'newest':
+          orderBy = { createdAt: 'desc' };
+          break;
+        case 'oldest':
+          orderBy = { createdAt: 'asc' };
+          break;
+        case 'salary':
+          orderBy = { jobPosting: { salaryMax: 'desc' } };
+          break;
+        case 'company':
+          orderBy = { jobPosting: { recruiter: { recruiterProfile: { companyName: 'asc' } } } };
+          break;
+        case 'location':
+          orderBy = { jobPosting: { locationMode: 'asc' } };
+          break;
+      }
     }
 
     const [items, total] = await Promise.all([
@@ -183,10 +280,10 @@ export class MatchingService {
         take: limit,
         include: {
           resume: { select: { id: true, title: true } },
-          jobPosting: { select: { id: true, title: true } },
+          jobPosting: { select: { id: true, title: true, description: true, employmentType: true, locationMode: true, salaryMin: true, salaryMax: true, experienceYears: true, category: true, recruiter: { select: { name: true, recruiterProfile: { select: { companyName: true } } } } } },
           questionSets: { select: { id: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       this.prismaClient.matchResult.count({ where }),
     ]);
@@ -195,5 +292,36 @@ export class MatchingService {
     matchCache.setList(userId, filterKey, result).catch(() => {});
 
     return result;
+  }
+
+  async queueAutoMatchesForResume(resumeId: string, ownerId: string): Promise<void> {
+    const resume = await this.prismaClient.resume.findUnique({
+      where: { id: resumeId, deletedAt: null },
+    });
+
+    if (!resume || resume.ownerId !== ownerId) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'RESUME_NOT_FOUND', 'Resume not found');
+    }
+
+    // Soft delete any existing AUTO_MATCH records for this resume/owner
+    await this.prismaClient.matchResult.updateMany({
+      where: {
+        resume: { ownerId },
+        contextType: MatchContextType.AUTO_MATCH,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    // Invalidate match caches
+    matchCache.invalidateList(ownerId).catch(() => {});
+
+    // Queue the background job to generate matches
+    addJob('auto-match-generation', {
+      resumeId,
+      ownerId,
+    }).catch(() => {});
   }
 }

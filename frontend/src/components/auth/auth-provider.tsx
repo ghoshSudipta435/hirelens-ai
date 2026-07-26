@@ -37,7 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   if (status === 'bootstrapping') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingState label="Loading..." />
       </div>
     );

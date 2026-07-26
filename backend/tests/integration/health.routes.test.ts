@@ -7,6 +7,7 @@ const prismaMock = {
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaMock,
+  prismaRead: prismaMock,
 }));
 
 const ORIGINAL_REDIS_URL = process.env.REDIS_URL;
@@ -80,7 +81,7 @@ describe('health routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.workers).toBe('running');
-    expect(response.body.data.redis).toBe('configured');
+    expect(response.body.data.redis).toBe('connected');
     expect(response.body.data.queues).toHaveLength(3);
     expect(response.body.data.queues).toContain('resume-parse');
     expect(response.body.data.queues).toContain('match-score');

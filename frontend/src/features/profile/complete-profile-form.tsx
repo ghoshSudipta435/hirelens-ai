@@ -24,16 +24,16 @@ import {
 import { useAuthStore } from '@/stores/auth.store';
 import { isProfileComplete, isRecruiterProfile, isStudentProfile } from '@/utils/profile-completion';
 
-export function CompleteProfileForm() {
+export function CompleteProfileForm({ isSettingsPage = false }: { isSettingsPage?: boolean }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const profileQuery = useCurrentProfileQuery(Boolean(user));
 
   useEffect(() => {
-    if (profileQuery.data && isProfileComplete(profileQuery.data)) {
+    if (!isSettingsPage && profileQuery.data && isProfileComplete(profileQuery.data)) {
       router.replace('/dashboard');
     }
-  }, [profileQuery.data, router]);
+  }, [profileQuery.data, router, isSettingsPage]);
 
   if (profileQuery.isLoading) {
     return <LoadingState label="Loading profile" />;

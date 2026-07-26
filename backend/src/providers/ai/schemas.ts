@@ -9,7 +9,7 @@ export const matchOutputSchema = z.object({
 
 export const interviewQuestionSchema = z.object({
   question: z.string().min(1),
-  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
+  difficulty: z.preprocess((val) => (typeof val === 'string' ? val.toUpperCase() : val), z.enum(['EASY', 'MEDIUM', 'HARD'])),
   category: z.string().min(1),
 });
 

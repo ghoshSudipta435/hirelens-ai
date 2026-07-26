@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient, type EmploymentType, JobPostingStatus, type 
 import { StatusCodes } from 'http-status-codes';
 
 import { logger } from '../../config/logger';
-import { prisma } from '../../config/prisma';
+import { prisma, prismaRead } from '../../config/prisma';
 import { jobCache } from '../../providers/cache/keys';
 import { providers } from '../../config/providers';
 import { ApiError } from '../../utils/api-error';
@@ -14,9 +14,11 @@ type JobPrismaClient = Pick<PrismaClient, 'jobPosting'>;
 
 export class JobService {
   private readonly prismaClient: JobPrismaClient;
+  private readonly prismaReadClient: JobPrismaClient;
 
-  constructor(dependencies: { prismaClient?: JobPrismaClient } = {}) {
+  constructor(dependencies: { prismaClient?: JobPrismaClient; prismaReadClient?: JobPrismaClient } = {}) {
     this.prismaClient = dependencies.prismaClient ?? prisma;
+    this.prismaReadClient = dependencies.prismaReadClient ?? prismaRead;
   }
 
   async createJob(recruiterId: string, data: CreateJobInputDto) {
@@ -32,7 +34,7 @@ export class JobService {
       },
     });
 
-    jobCache.invalidateList().catch(() => {});
+    await jobCache.invalidateList().catch(() => {});
 
     this.extractAndUpdateSkills(job.id, data.description).catch((err) => {
       logger.warn({ err, jobId: job.id }, 'Job skill extraction failed');
@@ -45,7 +47,7 @@ export class JobService {
     const cached = await jobCache.get(jobId);
     if (cached) return cached;
 
-    const job = await this.prismaClient.jobPosting.findUnique({
+    const job = await this.prismaReadClient.jobPosting.findUnique({
       where: { id: jobId },
       include: {
         recruiter: {
@@ -58,15 +60,15 @@ export class JobService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'JOB_NOT_FOUND', 'Job posting not found');
     }
 
-    jobCache.set(jobId, job).catch(() => {});
+    await jobCache.set(jobId, job).catch(() => {});
 
     return job;
   }
 
-  async listJobs(query: JobPostingListQuery): Promise<PaginatedResponse<unknown>> {
+  async listJobs(userId: string, role: string, query: JobPostingListQuery): Promise<PaginatedResponse<unknown>> {
     const { page, limit, skip } = parsePagination(query);
 
-    const filterKey = JSON.stringify({ status: query.status, search: query.search, employmentType: query.employmentType, locationMode: query.locationMode, page, limit });
+    const filterKey = JSON.stringify({ userId, role, status: query.status, search: query.search, employmentType: query.employmentType, locationMode: query.locationMode, page, limit });
     const cached = await jobCache.get(`list:${filterKey}`);
     if (cached) return cached as PaginatedResponse<unknown>;
 
@@ -74,7 +76,13 @@ export class JobService {
       deletedAt: null,
     };
 
-    if (query.status) {
+    if (role === 'STUDENT') {
+      where.status = JobPostingStatus.ACTIVE;
+    } else if (role === 'RECRUITER') {
+      where.recruiterId = userId;
+    }
+
+    if (query.status && role !== 'STUDENT') {
       where.status = query.status as JobPostingStatus;
     }
 
@@ -93,29 +101,89 @@ export class JobService {
       where.locationMode = query.locationMode as LocationMode;
     }
 
+    if (query.category) {
+      where.category = query.category;
+    }
+
+    if (query.company) {
+      where.recruiter = {
+        recruiterProfile: {
+          companyName: { contains: query.company, mode: 'insensitive' }
+        }
+      };
+    }
+
+    if (query.experienceYears !== undefined) {
+      where.experienceYears = { lte: query.experienceYears };
+    }
+
+    if (query.salaryMin !== undefined || query.salaryMax !== undefined) {
+      where.AND = where.AND || [];
+      if (query.salaryMin !== undefined) {
+        (where.AND as any[]).push({
+          OR: [{ salaryMax: { gte: query.salaryMin } }, { salaryMin: { gte: query.salaryMin } }]
+        });
+      }
+      if (query.salaryMax !== undefined) {
+        (where.AND as any[]).push({
+          OR: [{ salaryMin: { lte: query.salaryMax } }, { salaryMax: { lte: query.salaryMax } }]
+        });
+      }
+    }
+
+    if (query.skills) {
+      const skillsArray = query.skills.split(',').map(s => s.trim()).filter(Boolean);
+      if (skillsArray.length > 0) {
+        where.extractedSkills = { hasSome: skillsArray };
+      }
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      switch (query.sort) {
+        case 'newest':
+          orderBy = { createdAt: 'desc' };
+          break;
+        case 'oldest':
+          orderBy = { createdAt: 'asc' };
+          break;
+        case 'salary_highest':
+          orderBy = { salaryMax: 'desc' };
+          break;
+        case 'salary_lowest':
+          orderBy = { salaryMin: 'asc' };
+          break;
+        case 'company_name':
+          orderBy = { recruiter: { recruiterProfile: { companyName: 'asc' } } };
+          break;
+        default:
+          break;
+      }
+    }
+
     const [items, total] = await Promise.all([
-      this.prismaClient.jobPosting.findMany({
+      this.prismaReadClient.jobPosting.findMany({
         where,
         skip,
         take: limit,
         include: {
           recruiter: {
-            select: { name: true, email: true },
+            select: { name: true, email: true, recruiterProfile: { select: { companyName: true } } },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
-      this.prismaClient.jobPosting.count({ where }),
+      this.prismaReadClient.jobPosting.count({ where }),
     ]);
 
     const result = buildPaginatedResponse(items, total, page, limit);
-    jobCache.set(`list:${filterKey}`, result).catch(() => {});
+    await jobCache.set(`list:${filterKey}`, result).catch(() => {});
 
     return result;
   }
 
   async updateJob(recruiterId: string, jobId: string, data: UpdateJobInputDto) {
-    const job = await this.prismaClient.jobPosting.findUnique({
+    const job = await this.prismaReadClient.jobPosting.findUnique({
       where: { id: jobId },
     });
 
@@ -145,13 +213,13 @@ export class JobService {
       });
     }
 
-    jobCache.invalidate(jobId).catch(() => {});
+    await jobCache.invalidate(jobId).catch(() => {});
 
     return updated;
   }
 
   async deleteJob(recruiterId: string, jobId: string): Promise<{ jobId: string }> {
-    const job = await this.prismaClient.jobPosting.findUnique({
+    const job = await this.prismaReadClient.jobPosting.findUnique({
       where: { id: jobId },
     });
 
@@ -164,7 +232,9 @@ export class JobService {
       data: { deletedAt: new Date() },
     });
 
-    jobCache.invalidate(jobId).catch(() => {});
+    await jobCache.invalidate(jobId).catch((err) => {
+      logger.error({ err, jobId }, 'Failed to invalidate job cache during deletion');
+    });
 
     return { jobId };
   }

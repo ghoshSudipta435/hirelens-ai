@@ -13,6 +13,10 @@ vi.mock('../../src/providers/ai', () => ({
   }),
 }));
 
+vi.mock('../../src/providers/queue', () => ({
+  addJob: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('InterviewService', () => {
   beforeEach(() => {
     vi.resetModules();

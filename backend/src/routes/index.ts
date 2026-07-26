@@ -11,6 +11,8 @@ import { resumesRouter } from '../modules/resumes/resumes.routes';
 import { uploadsRouter } from '../modules/uploads/uploads.routes';
 import { csrfProtection, csrfTokenEndpoint } from '../middleware/csrf.middleware';
 import { healthRouter } from './health.route';
+import { auditRouter } from '../modules/audit/audit.routes';
+import { sseRouter } from './sse.route';
 
 export const apiRouter = Router();
 
@@ -36,3 +38,5 @@ apiRouter.use('/interviews', csrfProtection, interviewRouter);
 apiRouter.use('/jobs', csrfProtection, jobsRouter);
 apiRouter.use('/matches', csrfProtection, matchingRouter);
 apiRouter.use('/users', csrfProtection, usersRouter);
+apiRouter.use('/admin', csrfProtection, auditRouter);
+apiRouter.use('/stream', sseRouter);

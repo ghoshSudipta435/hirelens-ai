@@ -26,6 +26,7 @@ function setAuthState(status: 'anonymous' | 'authenticated') {
         name: 'Test User',
         email: 'test@example.com',
         role: 'STUDENT',
+        avatarUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },

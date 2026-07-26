@@ -8,6 +8,7 @@ const prismaFixture = createPrismaMock();
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
+  prismaRead: prismaFixture.prismaMock,
 }));
 
 vi.mock('../../src/providers/storage/cloudinary.storage', () => ({
@@ -29,6 +30,7 @@ vi.mock('../../src/config/providers', () => ({
     getParser: vi.fn().mockResolvedValue({
       parse: vi.fn().mockResolvedValue({ rawText: 'test', skills: [], experience: [], education: [], summary: '' }),
     }),
+    getEmail: vi.fn().mockResolvedValue({ send: vi.fn().mockResolvedValue(true) }),
   },
 }));
 

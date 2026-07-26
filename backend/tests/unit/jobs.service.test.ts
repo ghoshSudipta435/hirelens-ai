@@ -10,7 +10,7 @@ describe('JobService', () => {
   it('creates a job posting successfully', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     const job = await service.createJob('user-1', {
       title: 'Software Engineer',
@@ -28,14 +28,14 @@ describe('JobService', () => {
   it('lists jobs with pagination', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push(
       { id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: '', extractedSkills: [], employmentType: EmploymentType.FULL_TIME, locationMode: LocationMode.REMOTE, status: JobPostingStatus.ACTIVE, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
       { id: 'job-2', recruiterId: 'user-1', title: 'Designer', description: '', extractedSkills: [], employmentType: EmploymentType.FULL_TIME, locationMode: LocationMode.REMOTE, status: JobPostingStatus.DRAFT, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
     );
 
-    const result = await service.listJobs({ page: 1, limit: 10 });
+    const result = await service.listJobs('user-1', 'RECRUITER', { page: 1, limit: 10 });
     expect(result.items).toHaveLength(2);
     expect(result.total).toBe(2);
   });
@@ -43,14 +43,14 @@ describe('JobService', () => {
   it('filters jobs by status', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push(
       { id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: '', extractedSkills: [], employmentType: EmploymentType.FULL_TIME, locationMode: LocationMode.REMOTE, status: JobPostingStatus.ACTIVE, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
       { id: 'job-2', recruiterId: 'user-1', title: 'Designer', description: '', extractedSkills: [], employmentType: EmploymentType.FULL_TIME, locationMode: LocationMode.REMOTE, status: JobPostingStatus.DRAFT, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
     );
 
-    const result = await service.listJobs({ status: JobPostingStatus.ACTIVE });
+    const result = await service.listJobs('user-1', 'RECRUITER', { status: JobPostingStatus.ACTIVE });
     expect(result.items).toHaveLength(1);
     expect((result.items[0] as any).title).toBe('Engineer');
   });
@@ -58,7 +58,7 @@ describe('JobService', () => {
   it('gets a job by id', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push({
       id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: 'desc', extractedSkills: [],
@@ -73,7 +73,7 @@ describe('JobService', () => {
   it('throws when getting a non-existent job', async () => {
     const { prismaMock } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     await expect(service.getJob('nonexistent')).rejects.toThrow('Job posting not found');
   });
@@ -81,7 +81,7 @@ describe('JobService', () => {
   it('updates a job posting', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push({
       id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: 'desc', extractedSkills: [],
@@ -101,7 +101,7 @@ describe('JobService', () => {
   it('prevents non-owner from updating a job', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push({
       id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: 'desc', extractedSkills: [],
@@ -115,7 +115,7 @@ describe('JobService', () => {
   it('soft deletes a job posting', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { JobService } = await import('../../src/modules/jobs/jobs.service');
-    const service = new JobService({ prismaClient: prismaMock });
+    const service = new JobService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.jobPostings.push({
       id: 'job-1', recruiterId: 'user-1', title: 'Engineer', description: 'desc', extractedSkills: [],

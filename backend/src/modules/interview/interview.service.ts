@@ -47,9 +47,18 @@ export class InterviewService {
 
     const job = await addJob('interview-generate', { matchResultId, recruiterId });
     if (job) {
-      return this.prismaClient.interviewQuestionSet.create({
+      const newSet = await this.prismaClient.interviewQuestionSet.create({
         data: { matchResultId },
       });
+
+      if (match.jobPosting?.recruiterId) {
+        matchCache.invalidateList(match.jobPosting.recruiterId).catch(() => {});
+      }
+      if (match.resume?.ownerId) {
+        matchCache.invalidateList(match.resume.ownerId).catch(() => {});
+      }
+
+      return newSet;
     }
 
     const aiInput: InterviewQuestionInput = {
@@ -72,21 +81,25 @@ export class InterviewService {
     }
 
     if (!questions || questions.length === 0) {
+      const mainSkill = match.matchedSkills?.[0] || 'the core technologies';
+      const missingSkill = match.missingSkills?.[0] || 'certain requirements';
+      const roleName = aiInput.jobTitle || 'this role';
+
       questions = [
         {
-          question: 'Can you describe your experience and how it relates to this role?',
+          question: `Can you walk us through your experience with ${mainSkill} and how you would apply it as a ${roleName}?`,
           difficulty: 'EASY',
-          category: 'General',
+          category: 'Technical',
         },
         {
-          question: 'What do you consider your greatest professional strength?',
+          question: `This role requires proficiency in ${missingSkill}. How would you approach getting up to speed with this quickly?`,
           difficulty: 'MEDIUM',
-          category: 'General',
+          category: 'Adaptability',
         },
         {
-          question: 'Describe a challenging project you worked on and how you overcame obstacles.',
+          question: `Describe a complex technical challenge you solved recently that prepares you for the specific demands of a ${roleName}.`,
           difficulty: 'HARD',
-          category: 'Behavioral',
+          category: 'Problem Solving',
         },
       ];
     }
@@ -134,7 +147,7 @@ export class InterviewService {
     return questionSet;
   }
 
-  async getQuestionSet(userId: string, questionSetId: string) {
+  async getQuestionSet(userId: string, role: string, questionSetId: string) {
     const questionSet = await this.prismaClient.interviewQuestionSet.findUnique({
       where: { id: questionSetId },
       include: {
@@ -155,8 +168,9 @@ export class InterviewService {
     const matchResult = questionSet.matchResult;
     const isOwner = matchResult?.jobPosting?.recruiterId === userId;
     const isCandidate = matchResult?.resume?.ownerId === userId;
+    const isAdmin = role === 'ADMIN';
 
-    if (!isOwner && !isCandidate) {
+    if (!isOwner && !isCandidate && !isAdmin) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'FORBIDDEN', 'You do not have access to this question set');
     }
 

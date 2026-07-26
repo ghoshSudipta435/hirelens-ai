@@ -4,12 +4,12 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'eslint.config.mjs'],
+    ignores: ['dist/**', 'node_modules/**', 'eslint.config.mjs', '**/*.js'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    files: ['**/*.ts'],
     languageOptions: {
       globals: globals.nodeBuiltin,
       parserOptions: {
@@ -29,7 +29,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.ts'],
+    files: ['tests/**/*.ts', 'prisma/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',

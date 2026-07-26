@@ -25,7 +25,7 @@ export class InterviewController {
 
   getQuestionSet = async (request: QuestionSetParamsRequest, response: Response, next: NextFunction) => {
     try {
-      const result = await this.interviewService.getQuestionSet(request.auth!.userId, request.params.id);
+      const result = await this.interviewService.getQuestionSet(request.auth!.userId, request.auth!.role, request.params.id);
 
       response.status(StatusCodes.OK).json({
         success: true,

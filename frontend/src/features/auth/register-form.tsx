@@ -58,14 +58,14 @@ export function RegisterForm() {
         type="email"
       />
       <fieldset>
-        <legend className="text-sm font-medium text-[var(--foreground)]">Role</legend>
+        <legend className="text-sm font-medium text-foreground">Role</legend>
         <div className="mt-2 grid grid-cols-2 gap-3">
           {(['STUDENT', 'RECRUITER'] as const).map((role) => (
             <label
               className={`rounded-lg border px-3 py-2 text-center text-sm font-medium ${
                 selectedRole === role
-                  ? 'border-[var(--accent)] bg-teal-50 text-teal-950'
-                  : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                  ? 'border-accent bg-teal-50 text-teal-950'
+                  : 'border-border bg-surface text-muted'
               }`}
               key={role}
             >
@@ -93,9 +93,9 @@ export function RegisterForm() {
         type="password"
       />
       <SubmitButton isLoading={registerMutation.isPending}>Create account</SubmitButton>
-      <p className="text-center text-sm text-[var(--muted)]">
+      <p className="text-center text-sm text-muted">
         Already have an account?{' '}
-        <Link className="font-semibold text-[var(--accent)]" href="/login">
+        <Link className="font-semibold text-accent" href="/login">
           Sign in
         </Link>
       </p>

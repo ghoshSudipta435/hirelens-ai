@@ -4,6 +4,8 @@ import { StatusCodes } from 'http-status-codes';
 import { logger } from '../../config/logger';
 import { prisma } from '../../config/prisma';
 import { providers } from '../../config/providers';
+import { eventBus } from '../../providers/events';
+import { cacheDeletePattern } from '../../providers/cache';
 import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import type { CreateApplicationInputDto, UpdateApplicationStatusInputDto } from './applications.schemas';
@@ -100,7 +102,17 @@ export class ApplicationService {
 
     logger.info({ eventType: 'APPLICATION_CREATED', applicationId: application.id, studentId, jobPostingId: data.jobPostingId, resumeId: data.resumeId }, 'Application created');
 
+    eventBus.publish('APPLICATION_SUBMITTED', {
+      applicationId: application.id,
+      studentId,
+      jobPostingId: data.jobPostingId,
+      resumeId: data.resumeId,
+      timestamp: new Date().toISOString(),
+    }).catch(err => logger.error({ err }, 'Failed to publish APPLICATION_SUBMITTED event'));
+
     this.autoCreateMatch(application.id, studentId, data.resumeId, data.jobPostingId);
+
+    cacheDeletePattern('apps:list:*').catch(() => {});
 
     return application;
   }
@@ -208,6 +220,9 @@ export class ApplicationService {
       this.autoCreateInterviewQuestions(applicationId, updated.resumeId, updated.jobPostingId, recruiterId);
     }
 
+    cacheDeletePattern('apps:list:*').catch(() => {});
+    cacheDeletePattern(`apps:detail:*${applicationId}*`).catch(() => {});
+
     return updated;
   }
 
@@ -274,6 +289,9 @@ export class ApplicationService {
 
     logger.info({ eventType: 'APPLICATION_DELETED', applicationId, userId, userRole }, 'Application soft-deleted');
 
+    cacheDeletePattern('apps:list:*').catch(() => {});
+    cacheDeletePattern(`apps:detail:*${applicationId}*`).catch(() => {});
+
     return { applicationId };
   }
 
@@ -308,6 +326,9 @@ export class ApplicationService {
     });
 
     logger.info({ eventType: 'APPLICATION_RESTORED', applicationId, userId, userRole }, 'Application restored');
+
+    cacheDeletePattern('apps:list:*').catch(() => {});
+    cacheDeletePattern(`apps:detail:*${applicationId}*`).catch(() => {});
 
     return restored;
   }

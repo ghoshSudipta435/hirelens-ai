@@ -3,7 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
+import { appEnv } from '@/config/env';
 import * as resumeService from '@/services/resume.service';
+import { useAuthStore } from '@/stores/auth.store';
 
 type ResumeViewerModalProps = {
   resumeId: string | null;
@@ -12,6 +14,7 @@ type ResumeViewerModalProps = {
 
 export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const { data: resume } = useQuery({
     queryKey: ['resume', resumeId],
@@ -43,26 +46,27 @@ export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps)
 
   if (!open) return null;
 
-  const isPdf = resume?.fileUrl?.endsWith('.pdf') ?? true;
+  const viewUrl = resume && accessToken ? `${appEnv.apiBaseUrl}/resumes/${resume.id}/file?token=${accessToken}#toolbar=0&navpanes=0&scrollbar=0` : '';
+
 
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-4xl rounded-lg border border-[var(--border)] bg-[var(--surface)] p-0 shadow-xl backdrop:bg-black/40"
+      className="w-full max-w-4xl rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/40"
       style={{ height: '85vh' }}
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-3">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">
+        <div className="flex items-center justify-between border-b border-border px-6 py-3">
+          <h2 className="text-lg font-semibold text-foreground">
             {resume?.title ?? 'Resume'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+            className="rounded-lg p-2 text-muted hover:bg-background hover:text-foreground"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -71,27 +75,27 @@ export function ResumeViewerModal({ resumeId, onClose }: ResumeViewerModalProps)
           </button>
         </div>
         <div className="flex-1">
-          {isPdf && resume ? (
+          {resume && viewUrl ? (
             <iframe
-              src={resume.fileUrl}
-              className="h-full w-full"
-              title={resume.title}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center p-8 text-center">
-              <div>
-                <p className="text-[var(--muted)]">Preview not available for this file type.</p>
-                <a
-                  href={resume?.fileUrl ?? '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                >
-                  Open in new tab
-                </a>
+              src={viewUrl}
+              title="Resume PDF"
+              className="h-full w-full rounded-b-lg border-0"
+            >
+              <div className="flex h-full items-center justify-center p-8 text-center">
+                <div>
+                  <p className="text-muted">Your browser does not support inline PDF viewing.</p>
+                  <a
+                    href={resume.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                  >
+                    Open in new tab
+                  </a>
+                </div>
               </div>
-            </div>
-          )}
+            </iframe>
+          ) : null}
         </div>
       </div>
     </dialog>

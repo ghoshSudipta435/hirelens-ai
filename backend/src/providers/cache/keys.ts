@@ -37,9 +37,14 @@ export const jobCache = {
   async invalidate(id: string) {
     await cacheDelete(cacheKeys.jobById(id), { prefix: JOB_PREFIX });
     await cacheDeletePattern(`job:*`, { prefix: JOB_PREFIX });
+    // Invalidate HTTP cache
+    await cacheDeletePattern(`jobs:detail:*`);
+    await cacheDeletePattern(`jobs:list:*`);
   },
   async invalidateList() {
     await cacheDeletePattern(`jobs:*`, { prefix: JOB_PREFIX });
+    // Invalidate HTTP cache
+    await cacheDeletePattern(`jobs:list:*`);
   },
 };
 

@@ -12,7 +12,7 @@ export default function CompleteProfilePage() {
           title="Complete your profile"
           description="Add the core details needed to personalize your HireLens workspace."
         >
-          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
+          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
             <CompleteProfileForm />
           </section>
         </PageShell>

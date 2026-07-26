@@ -11,7 +11,7 @@ describe('ResumeService', () => {
   it('creates a resume successfully', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { ResumeService } = await import('../../src/modules/resumes/resumes.service');
-    const service = new ResumeService({ prismaClient: prismaMock });
+    const service = new ResumeService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.uploads.push({
       id: 'file-1',
@@ -39,7 +39,7 @@ describe('ResumeService', () => {
   it('fails if uploaded file is owned by someone else', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { ResumeService } = await import('../../src/modules/resumes/resumes.service');
-    const service = new ResumeService({ prismaClient: prismaMock });
+    const service = new ResumeService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.uploads.push({
       id: 'file-1',
@@ -64,7 +64,7 @@ describe('ResumeService', () => {
   it('allows multiple active resumes with the same title', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { ResumeService } = await import('../../src/modules/resumes/resumes.service');
-    const service = new ResumeService({ prismaClient: prismaMock });
+    const service = new ResumeService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.resumes.push({
       id: 'resume-1',
@@ -100,7 +100,7 @@ describe('ResumeService', () => {
   it('allows updating to active if no other active resume exists', async () => {
     const { prismaMock, state } = createPrismaMock();
     const { ResumeService } = await import('../../src/modules/resumes/resumes.service');
-    const service = new ResumeService({ prismaClient: prismaMock });
+    const service = new ResumeService({ prismaClient: prismaMock, prismaReadClient: prismaMock });
 
     state.resumes.push({
       id: 'resume-1',

@@ -19,6 +19,8 @@ export function isRecruiterProfile(profile: ProfileResponse['profile']): profile
 export function isProfileComplete(profileResponse: ProfileResponse): boolean {
   const { profile, user } = profileResponse;
 
+  if (user.role === 'ADMIN') return true;
+
   if (user.role === 'STUDENT' && isStudentProfile(profile)) {
     return (
       hasValue(profile.fullName) &&

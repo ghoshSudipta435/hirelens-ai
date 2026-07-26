@@ -95,7 +95,7 @@ export default function JobDetailPage() {
         <PageShell eyebrow={job.employmentType.replace('_', ' ')} title={job.title}>
           <div className="space-y-6">
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-[var(--accent)]/10 px-3 py-1 text-xs font-medium text-[var(--accent)]">
+              <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
                 {job.locationMode}
               </span>
               <span
@@ -109,19 +109,19 @@ export default function JobDetailPage() {
               </span>
             </div>
 
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">Description</h2>
-              <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{job.description}</p>
+            <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Description</h2>
+              <p className="whitespace-pre-wrap text-sm leading-7 text-muted">{job.description}</p>
             </div>
 
             {job.extractedSkills && job.extractedSkills.length > 0 && (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-                <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">Required Skills</h2>
+              <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+                <h2 className="mb-3 text-sm font-semibold text-foreground">Required Skills</h2>
                 <div className="flex flex-wrap gap-2">
                   {job.extractedSkills.map((skill) => (
                     <span
                       key={skill}
-                      className="rounded-full bg-[var(--accent)]/10 px-3 py-1 text-xs font-medium text-[var(--accent)]"
+                      className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent"
                     >
                       {skill}
                     </span>
@@ -131,25 +131,25 @@ export default function JobDetailPage() {
             )}
 
             {job.recruiter && (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-                <h2 className="mb-2 text-sm font-semibold text-[var(--foreground)]">Posted by</h2>
-                <p className="text-sm text-[var(--muted)]">{job.recruiter.name} &middot; {job.recruiter.email}</p>
+              <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+                <h2 className="mb-2 text-sm font-semibold text-foreground">Posted by</h2>
+                <p className="text-sm text-muted">{job.recruiter.name} &middot; {job.recruiter.email}</p>
               </div>
             )}
 
             {user?.role === 'STUDENT' && (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-                <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">Actions</h2>
+              <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+                <h2 className="mb-3 text-sm font-semibold text-foreground">Actions</h2>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-[var(--muted)]" htmlFor="resume-select">
+                    <label className="block text-xs font-medium text-muted" htmlFor="resume-select">
                       Select Resume
                     </label>
                     <select
                       id="resume-select"
                       value={selectedResumeId}
                       onChange={(e) => setSelectedResumeId(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                      className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
                     >
                       <option value="">Choose a resume...</option>
                       {resumes?.items?.filter((r) => r.status === 'ACTIVE').map((r) => (
@@ -157,9 +157,9 @@ export default function JobDetailPage() {
                       ))}
                     </select>
                     {(!resumes?.items || resumes.items.length === 0) && (
-                      <p className="mt-1 text-xs text-[var(--muted)]">
+                      <p className="mt-1 text-xs text-muted">
                         No resumes yet.{' '}
-                        <Link href="/resumes/new" className="text-[var(--accent)] underline">Create one</Link>
+                        <Link href="/resumes/new" className="text-accent underline">Create one</Link>
                       </p>
                     )}
                   </div>
@@ -168,7 +168,7 @@ export default function JobDetailPage() {
                       type="button"
                       onClick={() => handleApply().catch(() => {})}
                       disabled={!selectedResumeId || createApplication.isPending}
-                      className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                     >
                       {createApplication.isPending ? 'Applying...' : 'Apply'}
                     </button>
@@ -176,7 +176,7 @@ export default function JobDetailPage() {
                       type="button"
                       onClick={() => handlePreviewMatch().catch(() => {})}
                       disabled={!selectedResumeId || previewMatch.isPending}
-                      className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-50"
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-surface disabled:opacity-50"
                     >
                       {previewMatch.isPending ? 'Matching...' : 'Preview Match'}
                     </button>
@@ -198,14 +198,14 @@ export default function JobDetailPage() {
                         // onError shows toast
                       }
                     }}
-                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                   >
                     Publish
                   </button>
                 )}
                 <Link
                   href={`/jobs/${params.id}/edit`}
-                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-surface"
                 >
                   Edit
                 </Link>

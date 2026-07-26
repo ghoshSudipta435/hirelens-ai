@@ -2,6 +2,7 @@ import type { AuthEventType, PrismaClient, Prisma } from '@prisma/client';
 
 import { logger } from '../../config/logger';
 import { prisma } from '../../config/prisma';
+import { eventBus } from '../../providers/events';
 
 type AuthAuditInput = {
   eventType: AuthEventType;
@@ -21,18 +22,8 @@ export class AuthAuditService {
 
   async record(input: AuthAuditInput): Promise<void> {
     try {
-      await this.prismaClient.authAuditEvent.create({
-        data: {
-          eventType: input.eventType,
-          success: input.success,
-          userId: input.userId,
-          email: input.email,
-          reason: input.reason,
-          ipAddress: input.ipAddress,
-          userAgent: input.userAgent,
-          metadata: input.metadata,
-        },
-      });
+      // Publish event asynchronously via EventBus
+      await eventBus.publish('AUTH_AUDIT_EVENT', input);
     } catch (error) {
       this.auditLogger.error(
         {
@@ -41,7 +32,7 @@ export class AuthAuditService {
           userId: input.userId,
           email: input.email,
         },
-        'Failed to persist auth audit event',
+        'Failed to publish auth audit event',
       );
     }
 
@@ -53,7 +44,7 @@ export class AuthAuditService {
         email: input.email,
         ipAddress: input.ipAddress,
       },
-      'Auth audit event',
+      'Auth audit event published',
     );
   }
 }

@@ -7,6 +7,7 @@ const prismaFixture = createPrismaMock();
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
+  prismaRead: prismaFixture.prismaMock,
 }));
 
 function getCookieHeader(response: { headers: Record<string, unknown> }) {

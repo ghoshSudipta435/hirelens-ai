@@ -24,6 +24,13 @@ export type JobPostingListQuery = {
   search?: string;
   employmentType?: string;
   locationMode?: string;
+  company?: string;
+  experienceYears?: number;
+  salaryMin?: number;
+  salaryMax?: number;
+  skills?: string;
+  category?: string;
+  sort?: string;
 };
 
 export type PaginatedResponse<T> = {

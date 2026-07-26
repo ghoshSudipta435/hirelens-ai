@@ -63,8 +63,8 @@ export function UploadForm({ onUploadComplete, accept = 'application/pdf', maxSi
       onDrop={handleDrop}
       className={`rounded-lg border-2 border-dashed p-8 text-center transition ${
         dragOver
-          ? 'border-[var(--accent)] bg-[var(--accent)]/5'
-          : 'border-[var(--border)] hover:border-[var(--accent)]/50'
+          ? 'border-accent bg-accent/5'
+          : 'border-border hover:border-accent/50'
       }`}
     >
       <input
@@ -76,17 +76,17 @@ export function UploadForm({ onUploadComplete, accept = 'application/pdf', maxSi
       />
       <label className="cursor-pointer" htmlFor="file-upload">
         <div className="flex flex-col items-center gap-2">
-          <svg className="h-10 w-10 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-10 w-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
           </svg>
           {uploadMutation.isPending ? (
-            <p className="text-sm text-[var(--muted)]">Uploading...</p>
+            <p className="text-sm text-muted">Uploading...</p>
           ) : (
             <>
-              <p className="text-sm text-[var(--foreground)]">
-                <span className="font-medium text-[var(--accent)]">Click to upload</span> or drag and drop
+              <p className="text-sm text-foreground">
+                <span className="font-medium text-accent">Click to upload</span> or drag and drop
               </p>
-              <p className="text-xs text-[var(--muted)]">PDF only &middot; Max {maxSizeMB}MB</p>
+              <p className="text-xs text-muted">PDF only &middot; Max {maxSizeMB}MB</p>
             </>
           )}
         </div>

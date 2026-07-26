@@ -41,6 +41,10 @@ export const profileUpdateBodySchema = z.union([
   recruiterProfileUpdateSchema,
 ]);
 
+export const profileAvatarUpdateSchema = z.object({
+  avatarUrl: optionalUrlSchema,
+});
+
 export function parseProfileUpdateInput(role: UserRole, body: unknown) {
   if (role === 'STUDENT') {
     return studentProfileUpdateSchema.parse(body);

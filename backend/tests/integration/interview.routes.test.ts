@@ -7,6 +7,7 @@ const prismaFixture = createPrismaMock();
 
 vi.mock('../../src/config/prisma', () => ({
   prisma: prismaFixture.prismaMock,
+  prismaRead: prismaFixture.prismaMock,
 }));
 
 vi.mock('../../src/providers/ai', () => ({
@@ -18,12 +19,17 @@ vi.mock('../../src/providers/ai', () => ({
       missingSkills: ['Python'],
       strengths: ['Strong frontend skills'],
     }),
-    generateInterviewQuestions: vi.fn().mockResolvedValue({
-      questions: [
-        { question: 'What is React?', difficulty: 'EASY', category: 'Frontend' },
-      ],
-    }),
+      generateInterviewQuestions: vi.fn().mockResolvedValue({
+        questions: [
+          { question: 'What is React?', difficulty: 'EASY', category: 'Frontend' },
+        ],
+      }),
+    getEmail: vi.fn().mockResolvedValue({ send: vi.fn().mockResolvedValue(true) }),
   }),
+}));
+
+vi.mock('../../src/providers/queue', () => ({
+  addJob: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('interview routes', () => {

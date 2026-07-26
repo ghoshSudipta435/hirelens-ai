@@ -57,9 +57,9 @@ export function LoginForm() {
         type="password"
       />
       <SubmitButton isLoading={loginMutation.isPending}>Sign in</SubmitButton>
-      <p className="text-center text-sm text-[var(--muted)]">
+      <p className="text-center text-sm text-muted">
         New to HireLens?{' '}
-        <Link className="font-semibold text-[var(--accent)]" href="/register">
+        <Link className="font-semibold text-accent" href="/register">
           Create an account
         </Link>
       </p>

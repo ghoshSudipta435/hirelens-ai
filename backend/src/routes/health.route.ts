@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import { prisma } from '../config/prisma';
+import { pingRedis } from '../providers/queue';
 
 export const healthRouter = Router();
 
@@ -32,13 +33,14 @@ export async function sendHealthResponse(_request: Request, response: Response) 
 
 export async function sendWorkersHealthResponse(_request: Request, response: Response) {
   const redisConfigured = !!process.env.REDIS_URL;
+  const isRedisUp = redisConfigured ? await pingRedis() : false;
 
   response.status(StatusCodes.OK).json({
     success: true,
     data: {
-      workers: redisConfigured ? 'running' : 'disabled',
-      redis: redisConfigured ? 'configured' : 'not_configured',
-      queues: redisConfigured ? ['resume-parse', 'match-score', 'interview-generate'] : [],
+      workers: isRedisUp ? 'running' : (redisConfigured ? 'failing' : 'disabled'),
+      redis: redisConfigured ? (isRedisUp ? 'connected' : 'disconnected') : 'not_configured',
+      queues: isRedisUp ? ['resume-parse', 'match-score', 'interview-generate'] : [],
       tip: redisConfigured ? undefined : 'Set REDIS_URL env var to enable background workers. Get a free instance at https://redis.com/try-free',
     },
   });

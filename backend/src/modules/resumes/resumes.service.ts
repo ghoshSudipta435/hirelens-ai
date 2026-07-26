@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient, ResumeStatus, type ResumeAuditEventType, typ
 import { StatusCodes } from 'http-status-codes';
 
 import { logger } from '../../config/logger';
-import { prisma } from '../../config/prisma';
+import { prisma, prismaRead } from '../../config/prisma';
 import { providers } from '../../config/providers';
 import { addJob } from '../../providers/queue';
 import type { CloudinaryStorage } from '../../providers/storage/cloudinary.storage';
@@ -11,20 +11,25 @@ import { ApiError } from '../../utils/api-error';
 import { buildPaginatedResponse, parsePagination } from '../../utils/pagination';
 import type { CreateResumeInputDto, UpdateResumeInputDto } from './resumes.schemas';
 import type { ResumeAuditInput, ResumeListQuery, ResumeWithFile } from './resumes.types';
+import { MatchingService } from '../matching/matching.service';
 
 type ResumePrismaClient = Pick<PrismaClient, 'resume' | 'uploadedFile' | 'resumeAuditEvent'>;
 
 export class ResumeService {
   private readonly prismaClient: ResumePrismaClient;
+  private readonly prismaReadClient: ResumePrismaClient;
   private readonly storage: CloudinaryStorage;
+  private readonly matchingService: MatchingService;
 
-  constructor(dependencies: { prismaClient?: ResumePrismaClient; storage?: CloudinaryStorage } = {}) {
+  constructor(dependencies: { prismaClient?: ResumePrismaClient; prismaReadClient?: ResumePrismaClient; storage?: CloudinaryStorage; matchingService?: MatchingService } = {}) {
     this.prismaClient = dependencies.prismaClient ?? prisma;
+    this.prismaReadClient = dependencies.prismaReadClient ?? prismaRead;
     this.storage = dependencies.storage ?? cloudinaryStorage;
+    this.matchingService = dependencies.matchingService ?? new MatchingService();
   }
 
   async createResume(userId: string, data: CreateResumeInputDto): Promise<ResumeWithFile> {
-    const file = await this.prismaClient.uploadedFile.findUnique({
+    const file = await this.prismaReadClient.uploadedFile.findUnique({
       where: { id: data.uploadedFileId },
     });
 
@@ -32,7 +37,7 @@ export class ResumeService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'FILE_NOT_FOUND', 'Uploaded file not found or unauthorized');
     }
 
-    const existingResumeWithFile = await this.prismaClient.resume.findUnique({
+    const existingResumeWithFile = await this.prismaReadClient.resume.findUnique({
       where: { uploadedFileId: data.uploadedFileId },
     });
 
@@ -40,7 +45,7 @@ export class ResumeService {
        throw new ApiError(StatusCodes.BAD_REQUEST, 'FILE_ALREADY_LINKED', 'This file is already associated with a resume');
     }
 
-    const lastVersionResume = await this.prismaClient.resume.findFirst({
+    const lastVersionResume = await this.prismaReadClient.resume.findFirst({
       where: { ownerId: userId, title: data.title },
       orderBy: { version: 'desc' },
     });
@@ -71,8 +76,17 @@ export class ResumeService {
     return resume;
   }
 
-  private async enrichResumeWithAi(resumeId: string, file: UploadedFile): Promise<void> {
+  public async enrichResumeWithAi(resumeId: string, file?: UploadedFile): Promise<void> {
     try {
+      if (!file) {
+        const resume = await this.prismaReadClient.resume.findUnique({
+          where: { id: resumeId },
+          include: { uploadedFile: true },
+        });
+        if (!resume || !resume.uploadedFile) throw new Error('Resume or file not found');
+        file = resume.uploadedFile;
+      }
+
       const aiProvider = await providers.getAI();
       const parser = await providers.getParser();
       const fileBuffer = await this.storage.downloadFile({ url: file.fileUrl });
@@ -93,73 +107,20 @@ export class ResumeService {
           data: { parsedData: parsedData as Prisma.InputJsonValue },
         });
 
-        this.autoPreviewMatches(resumeId, file.ownerId).catch((err) => {
-          logger.warn({ err, resumeId }, 'Auto-preview match failed');
+        this.matchingService.queueAutoMatchesForResume(resumeId, file.ownerId).catch((err) => {
+          logger.warn({ err, resumeId }, 'Auto-match generation failed to queue');
         });
       }
-    } catch {
-      // Parsing and AI enrichment is best-effort; resume creation succeeds regardless
+    } catch (error) {
+      logger.error({ err: error, resumeId }, 'Parsing and AI enrichment failed');
+      throw error;
     }
   }
 
-  private async autoPreviewMatches(resumeId: string, ownerId: string): Promise<void> {
-    const activeJobs = await prisma.jobPosting.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-    });
 
-    if (activeJobs.length === 0) return;
-
-    const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-    if (!resume) return;
-
-    const parsedData = (resume as unknown as { parsedData?: { rawText?: string; skills?: string[] } | null }).parsedData ?? null;
-    const resumeText = parsedData?.rawText ?? '';
-    const resumeSkills = parsedData?.skills ?? [];
-
-    const ai = await providers.getAI();
-
-    for (const job of activeJobs) {
-      try {
-        const matchInput = {
-          resumeSkills,
-          jobSkills: job.extractedSkills,
-          resumeText,
-          jobDescription: job.description,
-        };
-
-        let matchOutput: { score: number; matchedSkills: string[]; missingSkills: string[]; strengths: string[] };
-        try {
-          matchOutput = await ai.generateMatchScore(matchInput);
-        } catch {
-          const resumeLower = matchInput.resumeText.toLowerCase();
-          const matchedSkills = matchInput.jobSkills.filter((s) => resumeLower.includes(s.toLowerCase()));
-          const missingSkills = matchInput.jobSkills.filter((s) => !resumeLower.includes(s.toLowerCase()));
-          const score = matchInput.jobSkills.length > 0 ? Math.round((matchedSkills.length / matchInput.jobSkills.length) * 100) : 0;
-          matchOutput = { score: Math.min(score, 100), matchedSkills, missingSkills, strengths: matchedSkills.length > 0 ? [`Matched ${matchedSkills.length} skills`] : [] };
-        }
-
-        await prisma.matchResult.create({
-          data: {
-            contextType: 'PREVIEW',
-            resumeId,
-            jobPostingId: job.id,
-            score: matchOutput.score,
-            matchedSkills: matchOutput.matchedSkills,
-            missingSkills: matchOutput.missingSkills,
-            strengths: matchOutput.strengths,
-            scoreVersion: '1.0.0',
-          },
-        });
-      } catch {
-        // Best-effort per job
-      }
-    }
-  }
 
   async getResume(userId: string, resumeId: string): Promise<ResumeWithFile> {
-    const resume = await this.prismaClient.resume.findUnique({
+    const resume = await this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
       include: { uploadedFile: true },
     });
@@ -180,7 +141,7 @@ export class ResumeService {
     };
 
     const [items, total] = await Promise.all([
-      this.prismaClient.resume.findMany({
+      this.prismaReadClient.resume.findMany({
         where,
         skip,
         take: limit,
@@ -191,14 +152,14 @@ export class ResumeService {
           createdAt: 'desc',
         },
       }),
-      this.prismaClient.resume.count({ where }),
+      this.prismaReadClient.resume.count({ where }),
     ]);
 
     return buildPaginatedResponse(items, total, page, limit);
   }
 
   async updateResume(userId: string, resumeId: string, data: UpdateResumeInputDto): Promise<ResumeWithFile> {
-    const resume = await this.prismaClient.resume.findUnique({
+    const resume = await this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
     });
 
@@ -231,7 +192,7 @@ export class ResumeService {
   }
 
   async deleteResume(userId: string, resumeId: string): Promise<{ resumeId: string }> {
-    const resume = await this.prismaClient.resume.findUnique({
+    const resume = await this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
     });
 
@@ -250,7 +211,7 @@ export class ResumeService {
   }
 
   async downloadResumeFile(userId: string, resumeId: string): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
-    const resume = await this.prismaClient.resume.findUnique({
+    const resume = await this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
       include: { uploadedFile: true },
     });
@@ -283,7 +244,7 @@ export class ResumeService {
   }
 
   async reparseResume(userId: string, resumeId: string): Promise<ResumeWithFile> {
-    const resume = await this.prismaClient.resume.findUnique({
+    const resume = await this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
       include: { uploadedFile: true },
     });
@@ -298,14 +259,14 @@ export class ResumeService {
 
     await this.enrichResumeWithAi(resume.id, resume.uploadedFile);
 
-    return this.prismaClient.resume.findUnique({
+    return this.prismaReadClient.resume.findUnique({
       where: { id: resumeId },
       include: { uploadedFile: true },
     }) as unknown as ResumeWithFile;
   }
 
   async reparseAllResumes(): Promise<{ reprocessed: number; failed: number }> {
-    const resumes = await this.prismaClient.resume.findMany({
+    const resumes = await this.prismaReadClient.resume.findMany({
       where: { deletedAt: null },
       include: { uploadedFile: true },
     });

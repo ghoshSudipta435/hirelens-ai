@@ -29,16 +29,23 @@ function DashboardCard({
   return (
     <Link
       href={href}
-      className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm transition hover:shadow-md"
+      className="group relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-accent/40"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col justify-between h-full space-y-4">
         <div>
-          <h3 className="font-medium text-[var(--foreground)] group-hover:text-[var(--accent)]">{title}</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+          <h3 className="font-bold text-foreground text-lg tracking-tight group-hover:text-accent transition-colors duration-200">{title}</h3>
+          <p className="mt-2 text-sm text-muted/80 leading-relaxed">{description}</p>
         </div>
-        {count !== undefined && (
-          <span className={`rounded-full px-3 py-1 text-sm font-semibold ${accent}`}>{count}</span>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-accent/80 group-hover:text-accent transition-colors">
+            View Details &rarr;
+          </span>
+          {count !== undefined && (
+            <span className={`inline-flex items-center justify-center min-w-[2rem] rounded-full px-2.5 py-1 text-sm font-bold shadow-sm ${accent}`}>
+              {count}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -96,10 +103,8 @@ function StudentDashboard() {
 function RecruiterDashboard() {
   const user = useAuthStore((state) => state.user);
   const fetchJobs = useCallback(async () => jobService.listJobs({ limit: 1 }), []);
-  const fetchMatches = useCallback(async () => matchingService.listMatches({ limit: 1 }), []);
 
   const { data: jobs } = useQuery({ queryKey: ['jobs', 1], queryFn: fetchJobs, enabled: !!user });
-  const { data: matches } = useQuery({ queryKey: ['matches', 1], queryFn: fetchMatches, enabled: !!user });
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,17 +122,23 @@ function RecruiterDashboard() {
         accent="bg-amber-100 text-amber-700"
       />
       <DashboardCard
-        title="Match Results"
-        description="See candidate match scores"
-        count={matches?.total ?? 0}
-        href="/matches"
-        accent="bg-emerald-100 text-emerald-700"
-      />
-      <DashboardCard
         title="Interviews"
         description="Generate and view interview questions"
         href="/interviews"
         accent="bg-purple-100 text-purple-700"
+      />
+    </div>
+  );
+}
+
+function AdminDashboard() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <DashboardCard
+        title="Admin Panel"
+        description="View system metrics and security audit logs"
+        href="/admin"
+        accent="bg-red-100 text-red-700"
       />
     </div>
   );
@@ -144,7 +155,7 @@ export default function DashboardPage() {
           title={`Welcome back, ${user?.name?.split(' ')[0] ?? 'User'}`}
           description="Overview of your HireLens workspace"
         >
-          {user?.role === 'STUDENT' ? <StudentDashboard /> : <RecruiterDashboard />}
+          {user?.role === 'STUDENT' ? <StudentDashboard /> : user?.role === 'ADMIN' ? <AdminDashboard /> : <RecruiterDashboard />}
         </PageShell>
       </AppShell>
     </ProtectedRoute>

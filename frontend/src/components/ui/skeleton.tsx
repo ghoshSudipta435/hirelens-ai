@@ -5,7 +5,7 @@ type SkeletonProps = {
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-[var(--border)]/50 ${className}`}
+      className={`animate-pulse rounded-md bg-border/50 ${className}`}
       aria-hidden="true"
     />
   );
@@ -13,7 +13,7 @@ export function Skeleton({ className = '' }: SkeletonProps) {
 
 export function SkeletonCard() {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex-1 space-y-3">
           <Skeleton className="h-4 w-3/5" />
@@ -32,7 +32,7 @@ export function SkeletonJobList() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+        <div key={i} className="block rounded-lg border border-border bg-surface p-4 shadow-sm">
           <div className="space-y-2">
             <Skeleton className="h-5 w-3/5" />
             <Skeleton className="h-3 w-2/5" />
@@ -52,7 +52,7 @@ export function SkeletonDashboardCards() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+        <div key={i} className="rounded-lg border border-border bg-surface p-6 shadow-sm">
           <div className="space-y-3">
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-8 w-1/2" />
@@ -91,7 +91,7 @@ export function SkeletonCandidateList() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
           <Skeleton className="h-10 w-10 rounded-full" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-2/5" />
@@ -128,7 +128,7 @@ export function SkeletonApplicationList() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div key={i} className="rounded-lg border border-border bg-surface p-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-2/5" />
             <Skeleton className="h-3 w-3/5" />

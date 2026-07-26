@@ -3,6 +3,8 @@ import type { AIProvider, InterviewQuestionInput, InterviewQuestionOutput, Match
 import { interviewQuestionOutputSchema, matchOutputSchema, skillsOutputSchema } from '../schemas';
 import { buildSystemPrompt, wrapUserContent } from '../prompt-builder';
 import { withRetry } from '../retry';
+import { createCircuitBreaker } from '../../../utils/circuit-breaker';
+import type CircuitBreaker from 'opossum';
 
 type GeminiConfig = {
   apiKey: string;
@@ -20,24 +22,41 @@ export class GeminiProvider implements AIProvider {
         responseMimeType: 'application/json',
       },
     });
+
+    this.generateContentCb = createCircuitBreaker(
+      async (systemPrompt: string, userContent: string, temperature = 0.3) => {
+        return withRetry(async (signal) => {
+          const result = await this.model.generateContent(
+            {
+              systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: userContent }] }],
+              generationConfig: { temperature },
+            },
+            { signal },
+          );
+          return result.response.text();
+        });
+      },
+      {
+        name: 'GeminiProvider',
+        timeout: 35000,
+        errorThresholdPercentage: 50,
+      }
+    );
+
+    this.generateContentCb.fallback(() => {
+      throw new Error('AI Provider is currently unavailable due to high error rates.');
+    });
   }
+
+  private generateContentCb: CircuitBreaker<[string, string, number?], string>;
 
   private async generateContent(
     systemPrompt: string,
     userContent: string,
     temperature = 0.3,
   ): Promise<string> {
-    return withRetry(async (signal) => {
-      const result = await this.model.generateContent(
-        {
-          systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: userContent }] }],
-          generationConfig: { temperature },
-        },
-        { signal },
-      );
-      return result.response.text();
-    });
+    return this.generateContentCb.fire(systemPrompt, userContent, temperature);
   }
 
   async extractSkillsFromText(text: string): Promise<string[]> {
@@ -78,12 +97,25 @@ Return a JSON object with:
   async generateInterviewQuestions(input: InterviewQuestionInput): Promise<InterviewQuestionOutput> {
     const content = await this.generateContent(
       buildSystemPrompt(
-        `You are an interview question generator. Given a job description and a candidate's skill profile, generate relevant interview questions. Even if there are no matched skills, generate fundamental questions based on the job description to evaluate the candidate's potential.
+        `You are a Senior Staff Software Engineer and an expert technical interviewer. 
+Given a job description and a candidate's skill profile, generate highly specific, highly technical interview questions. 
+
+ABSOLUTE RESTRICTIONS (YOU MUST FOLLOW THESE OR FAIL):
+1. NO generic behavioral questions (e.g., "Tell me about a time...", "Describe a challenging project", "What is your greatest strength").
+2. NO general experience questions (e.g., "Can you describe your experience and how it relates to this role?").
+3. DO NOT ask about general soft skills, adaptability, or time management.
+
+MANDATORY REQUIREMENTS:
+1. Focus STRICTLY on deep technical knowledge, system design, architectural trade-offs, and practical edge-case scenarios related to the EXACT tools, languages, and frameworks mentioned in the job description.
+2. Every question must be deeply tailored to the candidate's matched and missing skills.
+3. Ask about code-level specifics, framework internals, or architectural patterns.
+4. If the job requires a specific technology, ask a highly specific question about it.
+
 Return a JSON object with:
 - questions: array of { question: string, difficulty: "EASY" | "MEDIUM" | "HARD", category: string }`,
       ),
       wrapUserContent(JSON.stringify(input)),
-      0.5,
+      0.7,
     );
 
     return interviewQuestionOutputSchema.parse(JSON.parse(content));

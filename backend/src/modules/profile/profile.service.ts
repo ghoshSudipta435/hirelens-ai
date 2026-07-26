@@ -30,6 +30,10 @@ type UserDelegate = {
       recruiterProfile?: boolean;
     };
   }): Promise<UserWithProfiles | null>;
+  update(args: {
+    where: { id: string };
+    data: { avatarUrl: string | null };
+  }): Promise<User>;
 };
 
 type StudentProfileDelegate = {
@@ -143,7 +147,22 @@ export class ProfileService {
     return this.getProfileByUserId(userId);
   }
 
+  async updateAvatar(userId: string, avatarUrl: string | null): Promise<ProfileResponse> {
+    await this.prismaClient.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+    });
+    return this.getProfileByUserId(userId);
+  }
+
   private toProfileResponse(user: UserWithProfiles): ProfileResponse {
+    if (user.role === 'ADMIN') {
+      return {
+        user: toPublicUser(user),
+        profile: {} as any,
+      };
+    }
+
     if (user.role === 'STUDENT') {
       if (!user.studentProfile) {
         throw new ApiError(

@@ -25,14 +25,14 @@ export function TextAreaField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor={id}>
+      <label className="block text-sm font-medium text-foreground" htmlFor={id}>
         {label}
       </label>
       <textarea
         {...registration}
         aria-describedby={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
-        className="mt-2 w-full resize-y rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-teal-900/10"
+        className="mt-2 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
         id={id}
         placeholder={placeholder}
         rows={rows}

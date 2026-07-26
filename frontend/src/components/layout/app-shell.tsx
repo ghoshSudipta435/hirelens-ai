@@ -16,14 +16,14 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <div className="min-h-screen bg-background text-foreground">
         <SkipLink />
         <NavBar />
         <div
           ref={mainRef}
           id="main-content"
           tabIndex={-1}
-          className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 sm:px-6 lg:px-8 outline-none"
+          className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 pb-24 sm:pb-6 sm:px-6 lg:px-8 outline-none"
         >
           {children}
         </div>

@@ -30,4 +30,14 @@ export type PreviewMatchInput = {
 export type MatchListQuery = {
   page?: number;
   limit?: number;
+  contextType?: string;
+  minScore?: number;
+  company?: string;
+  locationMode?: string;
+  employmentType?: string;
+  skills?: string;
+  salaryMin?: number;
+  experienceYears?: number;
+  category?: string;
+  sort?: string;
 };

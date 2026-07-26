@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
 
 import { validateRequest } from '../../middleware/validate-request';
-import { authenticateAccessToken } from '../auth/auth.middleware';
+import { authenticateAccessToken, authorizeRoles } from '../auth/auth.middleware';
 import { ResumeController } from './resumes.controller';
 import { createResumeRateLimit, updateResumeRateLimit } from './resumes.rate-limit';
 import { createResumeSchema, resumeListQuerySchema, resumeParamsSchema, updateResumeSchema } from './resumes.schemas';
@@ -74,5 +74,6 @@ resumesRouter.post(
 resumesRouter.post(
   '/reparse-all',
   authenticateAccessToken,
+  authorizeRoles('ADMIN'),
   resumeController.reparseAllResumes,
 );

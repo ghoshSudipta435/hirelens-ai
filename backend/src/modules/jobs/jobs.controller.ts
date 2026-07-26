@@ -51,7 +51,7 @@ export class JobController {
 
   listJobs = async (request: ListJobsRequest, response: Response, next: NextFunction) => {
     try {
-      const result = await this.jobService.listJobs(request.query);
+      const result = await this.jobService.listJobs(request.auth!.userId, request.auth!.role, request.query);
 
       response.status(StatusCodes.OK).json({
         success: true,

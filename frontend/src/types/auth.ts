@@ -1,9 +1,10 @@
-export type UserRole = 'STUDENT' | 'RECRUITER';
+export type UserRole = 'STUDENT' | 'RECRUITER' | 'ADMIN';
 
 export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: UserRole;
   createdAt: string;
   updatedAt: string;

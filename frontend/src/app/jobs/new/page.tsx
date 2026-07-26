@@ -12,7 +12,7 @@ export default function NewJobPage() {
           title="Create job posting"
           description="Post a new position to find the right candidate"
         >
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
             <JobForm />
           </div>
         </PageShell>
